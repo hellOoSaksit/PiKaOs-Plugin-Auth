@@ -12,7 +12,7 @@ import uuid
 
 import jwt
 
-from ...core import redis_client
+from . import session_store as redis_client
 from . import rbac_service, security, users_repo
 
 

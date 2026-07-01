@@ -11,21 +11,29 @@ Data layer (Phase C): the User/Role/Permission/Department models, the users/rbac
 plugin by the kernel's `scripts.migrate_plugins` at boot — Core's Alembic no longer owns auth tables.
 Cross-plugin refs are logical UUIDs (no FK across the boundary).
 
+Redis: the refresh-token / deny-list / perms-cache session store (`session_store.py`) left the kernel
+with the Redis extraction — it resolves the aioredis client from the `redis.Connection` contract (bound
+by the redis tool, a declared `dependency`) at register(), so auth reaches Redis through DI, not a kernel
+import.
+
 Package surface the Loader looks for (plugin-architecture.md §5/§10):
   router    — mounted by the Loader when this plugin is enabled
-  register  — binds the `identity.Provider` contract into the DI container
+  register  — binds `identity.Provider` + wires the Redis session store from `redis.Connection`
   migrate   — install-time schema step (create_all + seed), run by scripts.migrate_plugins
 """
 from .router import router
 
 
 def register(ctx) -> None:
-    """Bind the auth identity provider (JWT decode + user/permission lookup) into the DI container under
-    the IDENTITY token, so the kernel's identity deps resolve real users instead of the deny-all
-    bootstrap fallback."""
-    from ...core.contracts import IDENTITY
+    """Bind the auth identity provider (JWT decode + user/permission lookup) under the IDENTITY token, and
+    wire the Redis session store from the `redis.Connection` contract so refresh tokens / the deny-list /
+    the perms cache work. Redis boots first (a declared dependency); if it is somehow absent the store
+    degrades exactly like a Redis outage (fail-open reads)."""
+    from ...core.contracts import IDENTITY, REDIS_CONNECTION
     from .provider import AuthIdentityProvider
+    from . import session_store
 
+    session_store.bind(ctx.container.resolve(REDIS_CONNECTION))
     ctx.container.bind(IDENTITY, AuthIdentityProvider(ctx.session_factory))
 
 

@@ -3,9 +3,9 @@
   "name": "Authentication & RBAC",
   "version": "0.1.0",
   "coreVersion": "^0.1.0",
-  "dependencies": [],
+  "dependencies": ["redis"],
   "provides": [],
-  "consumes": [],
+  "consumes": ["redis.Connection"],
   "permissions": [],
   "routes": ["/api/auth"]
 }

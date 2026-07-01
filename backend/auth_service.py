@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core import redis_client
+from . import session_store as redis_client
 from ...core.config import settings
 from . import security, users_repo
 from .models import User

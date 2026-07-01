@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core import redis_client
+from . import session_store as redis_client
 from ...core.config import settings
 from ...core.identity import ADMIN_ROLE
 from . import rbac_repo
