@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core import redis_client
 from ...core.config import settings
 from ...core.identity import ADMIN_ROLE
-from ...core.models import User
-from ...core.repositories import rbac as rbac_repo
+from . import rbac_repo
+from .models import User
 
 __all__ = ["ADMIN_ROLE", "resolve_perms", "get_effective_perms", "invalidate"]
 

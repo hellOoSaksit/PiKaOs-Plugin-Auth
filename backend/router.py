@@ -11,9 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.db import get_db
 from ...core.identity import get_current_user
-from ...core.models import User
-from ...core.schemas import ForgotIn, LoginIn, LoginResult, TokenOut, UserOut
 from . import auth_service, rbac_service
+from .models import User
+from .schemas import ForgotIn, LoginIn, LoginResult, TokenOut, UserOut
 from .auth_service import InactiveAccount, InvalidCredentials, Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

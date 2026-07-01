@@ -13,10 +13,10 @@ from datetime import datetime, timezone
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core import redis_client, security
+from ...core import redis_client
 from ...core.config import settings
-from ...core.models import User
-from ...core.repositories import users as users_repo
+from . import security, users_repo
+from .models import User
 
 
 class InvalidCredentials(Exception):

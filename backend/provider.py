@@ -12,9 +12,8 @@ import uuid
 
 import jwt
 
-from ...core import redis_client, security
-from ...core.repositories import users as users_repo
-from . import rbac_service
+from ...core import redis_client
+from . import rbac_service, security, users_repo
 
 
 class AuthIdentityProvider:

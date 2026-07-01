@@ -5,14 +5,16 @@ require_perm / require_role in app/core/identity.py) resolve real users + permis
 `/api/auth`. The kernel owns the identity *interface* + FastAPI deps; this plugin is the
 *implementation*.
 
-Data layer note (transitional): the User/Role models, the users/rbac repositories, `security`
-(JWT/argon2), and the seed still live in the Base for now — this plugin reads them from the Base
-(plugin → Base is allowed; the Base never imports this plugin). They move into this plugin's own
-schema + migration in a later phase.
+Data layer (Phase C): the User/Role/Permission/Department models, the users/rbac repositories,
+`security` (JWT/argon2), and the seed all live IN this plugin now, on its own declarative `Base`
+(models.py). The plugin's tables are created + seeded by `migrate.migrate()`, invoked per enabled
+plugin by the kernel's `scripts.migrate_plugins` at boot — Core's Alembic no longer owns auth tables.
+Cross-plugin refs are logical UUIDs (no FK across the boundary).
 
 Package surface the Loader looks for (plugin-architecture.md §5/§10):
   router    — mounted by the Loader when this plugin is enabled
   register  — binds the `identity.Provider` contract into the DI container
+  migrate   — install-time schema step (create_all + seed), run by scripts.migrate_plugins
 """
 from .router import router
 
