@@ -1,0 +1,11 @@
+{
+  "id": "auth",
+  "name": "Authentication & RBAC",
+  "version": "0.1.0",
+  "coreVersion": "^0.1.0",
+  "dependencies": [],
+  "provides": [],
+  "consumes": [],
+  "permissions": [],
+  "routes": ["/api/auth"]
+}
