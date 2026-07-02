@@ -15,6 +15,7 @@ import asyncio
 
 from sqlalchemy import select
 
+from ... import plugin_loader
 from ...core.config import settings
 from . import security
 from .models import Permission, Role, RolePerm, User, UserPerm
@@ -28,47 +29,19 @@ SEED_USERS = [
     dict(username="dao",     display="ดาว ประเสริฐ",  email="dao@guildos.io",     role="member",  status="suspended", quota=100000, period="weekly",  used=99200,  avatar="🌙"),
 ]
 
-# --- RBAC seed (mirrors data-users.jsx) ---
-SEED_PERMISSIONS = [
-    ("agent.create", "Agents", "สร้าง Agent", "Create agents"),
-    ("agent.appearance", "Agents", "แก้รูปลักษณ์/คลาส Agent", "Edit appearance & class"),
-    ("character.manage", "Agents", "เพิ่ม/จัดการการ์ดตัวละคร", "Manage character cards"),
-    ("options.manage", "Agents", "เพิ่มตัวเลือก ตำแหน่ง/ทักษะ/เครื่องมือ", "Add roster options"),
-    ("rules.manage", "Agents", "แก้กฎหลัก (บังคับทุกตัว)", "Manage core rules"),
-    ("agent.config", "Agents", "แก้ตั้งค่าขั้นสูง (ตำแหน่ง/หน้าที่/โมเดล/API)", "Edit advanced config"),
-    ("profile.manage", "Agents", "สร้าง/จัดการโปรไฟล์ (Profile)", "Manage profiles"),
-    ("agent.edit.any", "Agents", "แก้ Agent ของผู้อื่น", "Edit any agent"),
-    ("agent.delete.any", "Agents", "ลบ Agent ของผู้อื่น", "Delete any agent"),
-    ("task.run", "Work", "สั่งรันงาน", "Run quests"),
-    ("task.delete", "Work", "ลบงาน (Task)", "Delete tasks"),
-    # Chat access (channel-agnostic — enforced by the Telegram bot today, the web chat later).
-    # Two tiers per the access model in features/telegram-integration.md: read-only vs read+command.
-    ("chat.read", "Chat", "อ่าน/รับข้อความจาก agent ผ่านแชต (อ่านอย่างเดียว)", "Read agent chat (read-only)"),
-    ("chat.use", "Chat", "อ่าน + สั่งงาน agent ผ่านแชต", "Use agent chat (read & command)"),
-    ("codex.view", "Knowledge", "ดู/ค้นหาคลังความรู้", "View & search codex"),
-    ("codex.manage", "Knowledge", "อัปโหลด/จัดการเนื้อหาคลังความรู้", "Upload & manage codex content"),
-    ("codex.delete", "Knowledge", "ลบเอกสารในคลังความรู้", "Delete codex documents"),
-    ("workflow.manage", "Workflows", "จัดการ workflow", "Manage workflows"),
-    ("room.build", "Room", "เปิดโหมดสร้างห้อง", "Open build mode"),
-    ("room.place", "Room", "วางของ/เฟอร์นิเจอร์", "Place items"),
-    ("room.move", "Room", "แก้ไขตำแหน่ง/รื้อของ", "Edit positions"),
-    ("room.reset", "Room", "รีเซตห้องเป็นค่าเริ่มต้น", "Reset room layout"),
-    ("room.create", "Room", "สร้างห้องใหม่", "Create rooms"),
-    ("room.template", "Room", "สร้าง/บันทึกเทมเพลตห้อง", "Create room templates"),
-    ("room.delete", "Room", "ลบห้อง", "Delete rooms"),
-    ("token.manage", "Admin", "ตั้งโควตาโทเคน", "Manage token quota"),
-    ("user.view.any", "Admin", "ดูข้อมูลสมาชิก", "View any user"),
-    ("user.manage", "Admin", "จัดการสมาชิก", "Manage users"),
-    ("role.manage", "Admin", "จัดการบทบาท/สิทธิ์", "Manage roles"),
-    ("audit.view", "Admin", "ดูบันทึกการตรวจสอบ", "View audit log"),
-    ("llm.view", "Admin", "ดูการตั้งค่า LLM/โมเดล", "View LLM provider config"),
-    ("llm.manage", "Admin", "ตั้งค่า LLM/โมเดล (provider/API หรือ Local)", "Manage LLM provider config"),
-    ("llm.assign", "Admin", "มอบหมายโมเดลให้ระบบ (engine/search/summarize)", "Assign LLM to system roles"),
-    ("infra.manage", "Admin", "ดู/ทดสอบการเชื่อมต่อ Storage/ระบบภายนอก", "View/test infrastructure connections"),
-    ("telegram.manage", "Admin", "ตั้งค่าบอท Telegram (เชื่อมต่อ/webhook)", "Manage Telegram bot connection"),
-    ("plugins.manage", "Admin", "ติดตั้ง/เปิด-ปิด/ถอนปลั๊กอิน", "Install / enable / uninstall plugins"),
-]
-_PERM_KEYS = [p[0] for p in SEED_PERMISSIONS]
+# --- RBAC seed ---
+# Permissions are NO LONGER hardcoded here (Phase D permission-catalog seam): each plugin declares the
+# perms it owns in its manifest, and the auth plugin aggregates them across every ENABLED plugin via the
+# kernel's `plugin_loader.permission_catalog`. Base ships zero plugin perms; installing a plugin adds its
+# perms to what gets seeded. Roles + their default bindings below stay auth-owned (auth is the RBAC home),
+# and a binding is applied ONLY if its perm exists in the current catalog (an uninstalled plugin's perms
+# are simply skipped, never seeded as dangling bindings).
+
+
+def permission_catalog() -> list[dict]:
+    """{key, group, name_th, name_en, plugin} for every perm declared by the enabled plugins."""
+    return plugin_loader.permission_catalog(
+        plugin_loader.enabled_optional_modules(), plugin_loader.PLUGIN_MANIFESTS)
 
 SEED_ROLES = [
     ("admin", "ผู้ดูแลระบบ", "Admin", "เข้าถึงและจัดการได้ทุกอย่าง", "magic", True),
@@ -77,16 +50,18 @@ SEED_ROLES = [
     ("viewer", "ผู้อ่าน", "Viewer", "ดูอย่างเดียว ไม่มีสิทธิ์แก้ไข", "idle", True),
 ]
 
+# Default role→perm bindings. `admin` = "*" (every perm in the current catalog). The others are curated
+# subsets by bare key; a key absent from the catalog (its plugin isn't installed) is skipped at seed time.
+# room.* (the World plugin) has no backend manifest yet, so it's simply not in the catalog and drops out.
 SEED_ROLE_PERMS = {
-    "admin": list(_PERM_KEYS),
+    "admin": "*",
     "manager": ["agent.create", "agent.edit.any", "agent.delete.any", "task.run",
-                "codex.view", "codex.manage", "codex.delete", "chat.use",
-                "workflow.manage", "user.view.any", "audit.view", "room.build", "room.place",
-                "room.move", "room.reset", "room.create", "room.delete", "room.template",
+                "knowledge.view", "knowledge.manage", "knowledge.delete", "chat.use",
+                "workflow.manage", "user.view.any", "audit.view",
                 "options.manage", "character.manage", "rules.manage", "agent.config", "task.delete"],
-    "member": ["agent.create", "task.run", "codex.view", "codex.manage", "codex.delete", "chat.use",
-               "workflow.manage", "room.build", "room.place", "room.move"],
-    "viewer": ["codex.view", "chat.read"],
+    "member": ["agent.create", "task.run", "knowledge.view", "knowledge.manage", "knowledge.delete",
+               "chat.use", "workflow.manage"],
+    "viewer": ["knowledge.view", "chat.read"],
 }
 
 # username -> {perm_key: allow(bool)}  (frontend "grant"/"deny" -> True/False)
@@ -111,11 +86,14 @@ async def seed(session_factory) -> None:
                 db.add(User(password_hash=password_hash, **u))
                 users_added += 1
 
-        # --- permissions ---
+        # --- permissions (from the aggregated plugin catalog, not a hardcoded list) ---
+        catalog = permission_catalog()
+        catalog_keys = [p["key"] for p in catalog]
+        catalog_key_set = set(catalog_keys)
         existing_perms = set((await db.execute(select(Permission.key))).scalars().all())
-        for key, grp, th, en in SEED_PERMISSIONS:
-            if key not in existing_perms:
-                db.add(Permission(key=key, grp=grp, name_th=th, name_en=en))
+        for p in catalog:
+            if p["key"] not in existing_perms:
+                db.add(Permission(key=p["key"], grp=p["group"], name_th=p["name_th"], name_en=p["name_en"]))
 
         # --- roles ---
         existing_roles = set((await db.execute(select(Role.key))).scalars().all())
@@ -123,10 +101,11 @@ async def seed(session_factory) -> None:
             if key not in existing_roles:
                 db.add(Role(key=key, name_th=th, name_en=en, description=desc, color=color, system=system))
 
-        # --- role_perms ---
+        # --- role_perms (bind only perms present in the catalog; "*" = all of them) ---
         existing_rp = set((await db.execute(select(RolePerm.role_key, RolePerm.perm_key))).all())
         for role_key, perm_keys in SEED_ROLE_PERMS.items():
-            for perm_key in perm_keys:
+            keys = catalog_keys if perm_keys == "*" else [k for k in perm_keys if k in catalog_key_set]
+            for perm_key in keys:
                 if (role_key, perm_key) not in existing_rp:
                     db.add(RolePerm(role_key=role_key, perm_key=perm_key))
 
@@ -141,13 +120,13 @@ async def seed(session_factory) -> None:
             if uid is None:
                 continue
             for perm_key, allow in overrides.items():
-                if (uid, perm_key) not in existing_up:
+                if perm_key in catalog_key_set and (uid, perm_key) not in existing_up:
                     db.add(UserPerm(user_id=uid, perm_key=perm_key, allow=allow))
                     up_added += 1
         await db.commit()
 
         print(f"[seed:auth] users +{users_added} (had {len(existing_users)}) · "
-              f"perms {len(_PERM_KEYS)} · roles {len(SEED_ROLES)} · user_perms +{up_added}")
+              f"perms {len(catalog_keys)} (from catalog) · roles {len(SEED_ROLES)} · user_perms +{up_added}")
 
 
 if __name__ == "__main__":

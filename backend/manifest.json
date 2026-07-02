@@ -3,9 +3,60 @@
   "name": "Authentication & RBAC",
   "version": "0.1.0",
   "coreVersion": "^0.1.0",
-  "dependencies": ["postgres", "redis"],
+  "dependencies": [
+    "postgres",
+    "redis"
+  ],
   "provides": [],
-  "consumes": ["postgres.Connection", "redis.Connection"],
-  "permissions": [],
-  "routes": ["/api/auth"]
+  "consumes": [
+    "postgres.Connection",
+    "redis.Connection"
+  ],
+  "permissions": [
+    {
+      "key": "token.manage",
+      "group": "Admin",
+      "name_th": "ตั้งโควตาโทเคน",
+      "name_en": "Manage token quota"
+    },
+    {
+      "key": "user.view.any",
+      "group": "Admin",
+      "name_th": "ดูข้อมูลสมาชิก",
+      "name_en": "View any user"
+    },
+    {
+      "key": "user.manage",
+      "group": "Admin",
+      "name_th": "จัดการสมาชิก",
+      "name_en": "Manage users"
+    },
+    {
+      "key": "role.manage",
+      "group": "Admin",
+      "name_th": "จัดการบทบาท/สิทธิ์",
+      "name_en": "Manage roles"
+    },
+    {
+      "key": "audit.view",
+      "group": "Admin",
+      "name_th": "ดูบันทึกการตรวจสอบ",
+      "name_en": "View audit log"
+    },
+    {
+      "key": "infra.manage",
+      "group": "Admin",
+      "name_th": "ดู/ทดสอบการเชื่อมต่อ Storage/ระบบภายนอก",
+      "name_en": "View/test infrastructure connections"
+    },
+    {
+      "key": "plugins.manage",
+      "group": "Admin",
+      "name_th": "ติดตั้ง/เปิด-ปิด/ถอนปลั๊กอิน",
+      "name_en": "Install / enable / uninstall plugins"
+    }
+  ],
+  "routes": [
+    "/api/auth"
+  ]
 }

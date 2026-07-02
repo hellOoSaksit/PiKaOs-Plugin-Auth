@@ -41,10 +41,15 @@ def test_deny_absent_perm_is_noop():
 # --- seed data integrity ---------------------------------------------------
 
 def test_seed_role_perms_are_within_catalog():
-    from app.plugins.auth.seed import SEED_ROLE_PERMS, _PERM_KEYS
+    # Permissions are no longer a hardcoded list — the catalog is aggregated from the enabled plugins'
+    # manifests (permission-catalog seam). A curated role binding may only reference perms in that catalog;
+    # `admin` is "*" (the whole catalog). A key whose plugin isn't installed is skipped at seed time.
+    from app.plugins.auth.seed import SEED_ROLE_PERMS, permission_catalog
 
-    catalog = set(_PERM_KEYS)
-    assert len(catalog) == len(_PERM_KEYS)  # no duplicate permission keys
+    catalog = {p["key"] for p in permission_catalog()}
+    assert catalog, "the enabled plugins must contribute a non-empty permission catalog"
+    assert SEED_ROLE_PERMS["admin"] == "*"  # admin binds to the full catalog
     for role, perms in SEED_ROLE_PERMS.items():
-        assert set(perms) <= catalog, f"{role} references unknown permission"
-    assert set(SEED_ROLE_PERMS["admin"]) == catalog  # admin = full catalog
+        if perms == "*":
+            continue
+        assert set(perms) <= catalog, f"{role} references a permission not in the catalog"
