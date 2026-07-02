@@ -3,9 +3,9 @@
   "name": "Authentication & RBAC",
   "version": "0.1.0",
   "coreVersion": "^0.1.0",
-  "dependencies": ["redis"],
+  "dependencies": ["postgres", "redis"],
   "provides": [],
-  "consumes": ["redis.Connection"],
+  "consumes": ["postgres.Connection", "redis.Connection"],
   "permissions": [],
   "routes": ["/api/auth"]
 }

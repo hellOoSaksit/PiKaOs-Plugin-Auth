@@ -16,7 +16,6 @@ import asyncio
 from sqlalchemy import select
 
 from ...core.config import settings
-from ...core.db import SessionLocal
 from . import security
 from .models import Permission, Role, RolePerm, User, UserPerm
 
@@ -97,10 +96,11 @@ SEED_USER_PERMS = {
 }
 
 
-async def seed(session_factory=None) -> None:
-    """Seed auth data. `session_factory` defaults to the kernel's SessionLocal so this is runnable
-    standalone; the migration runner may pass the app's factory."""
-    sf = session_factory or SessionLocal
+async def seed(session_factory) -> None:
+    """Seed auth data. `session_factory` is required — the migration runner passes the postgres Tool's
+    factory (the zero-datastore kernel has no SessionLocal). For a standalone run, `__main__` below builds
+    a throwaway engine from settings."""
+    sf = session_factory
     password_hash = security.hash_password(settings.seed_password)
     async with sf() as db:
         # --- users ---
@@ -151,4 +151,8 @@ async def seed(session_factory=None) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    # Standalone dev seed — build a throwaway engine from settings (the kernel owns none now).
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    _sf = async_sessionmaker(create_async_engine(settings.database_url), expire_on_commit=False)
+    asyncio.run(seed(_sf))

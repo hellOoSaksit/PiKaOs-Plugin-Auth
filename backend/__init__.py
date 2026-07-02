@@ -29,12 +29,15 @@ def register(ctx) -> None:
     wire the Redis session store from the `redis.Connection` contract so refresh tokens / the deny-list /
     the perms cache work. Redis boots first (a declared dependency); if it is somehow absent the store
     degrades exactly like a Redis outage (fail-open reads)."""
-    from ...core.contracts import IDENTITY, REDIS_CONNECTION
+    from ...core.contracts import IDENTITY, POSTGRES_CONNECTION, REDIS_CONNECTION
     from .provider import AuthIdentityProvider
     from . import session_store
 
     session_store.bind(ctx.container.resolve(REDIS_CONNECTION))
-    ctx.container.bind(IDENTITY, AuthIdentityProvider(ctx.session_factory))
+    # Zero-datastore kernel: the session factory comes from the postgres Tool's contract (a declared
+    # dependency, so it registered first), not a kernel SessionLocal passed on ctx.
+    sf = ctx.container.resolve(POSTGRES_CONNECTION)["session_factory"]
+    ctx.container.bind(IDENTITY, AuthIdentityProvider(sf))
 
 
 __all__ = ["router", "register"]
