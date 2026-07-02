@@ -1,0 +1,4 @@
+# Auth owns login/session + password hashing → these libs are its own (merged into the Core image at
+# build when auth is enabled). sqlalchemy comes from the postgres tool it depends on.
+PyJWT==2.13.0
+argon2-cffi==25.1.0
