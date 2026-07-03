@@ -65,3 +65,35 @@ async def test_refresh_via_header():
         )
         assert r.status_code == 200, r.text
         assert r.json()["refreshToken"]
+
+
+@pytest.mark.asyncio
+async def test_logout_token_mode_revokes():
+    async with client() as c:
+        login = await c.post(
+            "/api/auth/login",
+            headers={"X-Client-Mode": "token"},
+            json={"usernameOrEmail": "somchai", "password": PW},
+        )
+        assert login.status_code == 200, login.text
+        body = login.json()
+        access = body["token"]["accessToken"]
+        rt = body["refreshToken"]
+
+        out = await c.post(
+            "/api/auth/logout",
+            headers={
+                "X-Client-Mode": "token",
+                "X-Refresh-Token": rt,
+                "Authorization": f"Bearer {access}",
+            },
+        )
+        assert out.status_code == 204, out.text
+        # nothing to clear in token mode — logout must not set/touch the refresh cookie
+        assert settings.refresh_cookie_name not in out.cookies
+
+        r3 = await c.post(
+            "/api/auth/refresh",
+            headers={"X-Client-Mode": "token", "X-Refresh-Token": rt},
+        )
+        assert r3.status_code == 401, r3.text
