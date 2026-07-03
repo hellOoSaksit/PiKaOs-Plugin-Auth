@@ -44,3 +44,4 @@ class UserOut(BaseModel):
 class LoginResult(BaseModel):
     token: TokenOut
     user: UserOut
+    refreshToken: str | None = None  # populated only in token mode (desktop); web relies on the cookie

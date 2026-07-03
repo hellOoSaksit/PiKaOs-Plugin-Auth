@@ -2,6 +2,11 @@
 
 The refresh token travels as an httpOnly cookie; the access token is returned in
 the JSON body for the SPA to send as `Authorization: Bearer ...`.
+
+Desktop clients use "token mode" instead: request header `X-Client-Mode: token` makes
+login/refresh return the refresh token in the JSON body (`refreshToken`) and skip setting
+the cookie; refresh/logout then read the refresh token from `X-Refresh-Token` (falling back
+to the `pikaos_refresh` cookie when that header is absent). The web cookie flow is unchanged.
 """
 from __future__ import annotations
 
@@ -22,6 +27,10 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE_PATH = "/api/auth"
 
 
+def _is_token_mode(x_client_mode: str | None) -> bool:
+    return (x_client_mode or "").lower() == "token"
+
+
 def _set_refresh_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key=settings.refresh_cookie_name,
@@ -40,16 +49,31 @@ def _user_out(user: User, perms: set[str]) -> UserOut:
     return out
 
 
-def _session_response(response: Response, session: Session, perms: set[str]) -> LoginResult:
-    _set_refresh_cookie(response, session.refresh_token)
-    return LoginResult(
+def _session_response(
+    response: Response,
+    session: Session,
+    perms: set[str],
+    token_mode: bool = False,
+) -> LoginResult:
+    result = LoginResult(
         token=TokenOut(accessToken=session.access_token, expiresIn=session.expires_in),
         user=_user_out(session.user, perms),
     )
+    if token_mode:
+        # desktop client: hand the refresh token back in the body, no cookie set
+        result.refreshToken = session.refresh_token
+    else:
+        _set_refresh_cookie(response, session.refresh_token)
+    return result
 
 
 @router.post("/login", response_model=LoginResult)
-async def login(body: LoginIn, response: Response, db: AsyncSession = Depends(get_db)) -> LoginResult:
+async def login(
+    body: LoginIn,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    x_client_mode: str | None = Header(default=None),
+) -> LoginResult:
     try:
         session = await auth_service.login(db, body.usernameOrEmail, body.password)
     except InvalidCredentials:
@@ -57,7 +81,7 @@ async def login(body: LoginIn, response: Response, db: AsyncSession = Depends(ge
     except InactiveAccount:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
     perms = await rbac_service.get_effective_perms(db, session.user)
-    return _session_response(response, session, perms)
+    return _session_response(response, session, perms, token_mode=_is_token_mode(x_client_mode))
 
 
 @router.post("/refresh", response_model=LoginResult)
@@ -65,14 +89,19 @@ async def refresh(
     response: Response,
     db: AsyncSession = Depends(get_db),
     pikaos_refresh: str | None = Cookie(default=None),
+    x_client_mode: str | None = Header(default=None),
+    x_refresh_token: str | None = Header(default=None),
 ) -> LoginResult:
+    token_mode = _is_token_mode(x_client_mode)
+    effective_refresh = x_refresh_token or pikaos_refresh
     try:
-        session = await auth_service.rotate(db, pikaos_refresh)
+        session = await auth_service.rotate(db, effective_refresh)
     except InvalidCredentials:
-        response.delete_cookie(settings.refresh_cookie_name, path=COOKIE_PATH)
+        if not token_mode:
+            response.delete_cookie(settings.refresh_cookie_name, path=COOKIE_PATH)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
     perms = await rbac_service.get_effective_perms(db, session.user)
-    return _session_response(response, session, perms)
+    return _session_response(response, session, perms, token_mode=token_mode)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -80,9 +109,13 @@ async def logout(
     response: Response,
     authorization: str | None = Header(default=None),
     pikaos_refresh: str | None = Cookie(default=None),
+    x_client_mode: str | None = Header(default=None),
+    x_refresh_token: str | None = Header(default=None),
 ) -> Response:
-    await auth_service.revoke(pikaos_refresh, authorization)
-    response.delete_cookie(settings.refresh_cookie_name, path=COOKIE_PATH)
+    effective_refresh = x_refresh_token or pikaos_refresh
+    await auth_service.revoke(effective_refresh, authorization)
+    if not _is_token_mode(x_client_mode):
+        response.delete_cookie(settings.refresh_cookie_name, path=COOKIE_PATH)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 
