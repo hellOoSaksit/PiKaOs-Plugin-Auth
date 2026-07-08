@@ -1,12 +1,13 @@
 /* Auth plugin — frontend descriptor. Contributes the RBAC/identity management screens (User Management,
-   Roles, Permissions, Audit) to Core through the plugin seam (import.meta.glob discovery). Present only
-   when this plugin is linked; a kernel-only Core ships none of it. render(ctx) gets Core seams
-   { t, can, language, go }; the plugin owns all RBAC state via AuthAdmin. User detail is INTERNAL to the
-   admin route (list<->detail), not a Core route. */
+   Roles, Permissions, Audit) plus the utility bar's account control to Core through the plugin seam
+   (import.meta.glob discovery). Present only when this plugin is linked; a kernel-only Core ships none
+   of it. render(ctx) gets Core seams { t, can, language, go }; the plugin owns all RBAC state via
+   AuthAdmin. User detail is INTERNAL to the admin route (list<->detail), not a Core route. */
 import React from 'react';
 const { useState } = React;
 import { AuthAdmin } from './provider.jsx';
 import { Admin } from './admin.jsx';
+import { Profile } from './profile.jsx';
 import { UserDetail, RolesPermissions, PermissionsCatalog, AuditLog } from './rbac.jsx';
 
 // Admin list <-> user detail, kept internal to the plugin (Core no longer holds userSel).
@@ -43,6 +44,8 @@ export default {
       ],
     },
   ],
+  // The utility bar's account control. Core renders nothing here until identity is installed.
+  profile: (ctx) => <Profile me={ctx.me} t={ctx.t} onSignOut={ctx.onSignOut} />,
   // CORE_PERMISSIONS (incl. the identity perms) moved with data-users.jsx and is shown by the
   // Permissions screen directly; re-contributing it here would double the catalog. Proper per-plugin
   // permission ownership (splitting CORE_PERMISSIONS across plugins) is a follow-up.

@@ -6,6 +6,7 @@ import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
 import { ACTION_META, PERMISSIONS, fmtTok, resolvePerms, roleByKey, usagePct, userById } from './data-users.jsx';
+import { AVATAR_PRESETS } from './profile.jsx';
 import { Admin, RoleBadge, StatusPill } from './admin.jsx';
 
 /* ============================================================
@@ -34,7 +35,6 @@ function UserForm({ Sys, initial, onClose }) {
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   const unlimited = f.quota == null;
   const canSave = f.display.trim() && f.username.trim();
-  const AVATARS = ["🙂", "🦉", "🛠️", "📜", "👁️", "🌙", "🧙", "🦊", "🐲", "⚜️"];
 
   const submit = () => {
     if (!canSave) return;
@@ -59,7 +59,7 @@ function UserForm({ Sys, initial, onClose }) {
         <div className="userform-body">
           <Field label={T("Avatar", "รูปแทนตัว")}>
             <div className="avatar-pick">
-              {AVATARS.map(a => (
+              {AVATAR_PRESETS.map(a => (
                 <button key={a} type="button" className={`avatar-opt ${f.avatar === a ? "on" : ""}`} onClick={() => set("avatar", a)}>{a}</button>
               ))}
             </div>
