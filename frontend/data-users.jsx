@@ -1,5 +1,4 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/data-users.jsx). */
-import { PLUGIN_PERMISSIONS } from '../index.jsx';
 
 /* ============================================================
    USERS / RBAC / AUDIT — real people who log in (distinct from agents).
@@ -37,8 +36,12 @@ const CORE_PERMISSIONS = [
   { key: "infra.manage",     group: "Admin",     th: "ดู/ทดสอบการเชื่อมต่อ Storage/ระบบ", en: "View/test infrastructure connections" },
   { key: "plugins.manage",   group: "Admin",     th: "ติดตั้ง/เปิด-ปิด/ถอนปลั๊กอิน",      en: "Install / enable / uninstall plugins" },
 ];
-/* effective catalog = kernel perms + perms contributed by every installed plugin (dynamic, §0). */
-const PERMISSIONS = [...CORE_PERMISSIONS, ...PLUGIN_PERMISSIONS];
+/* Permission catalog shown by the RBAC screens. Uses the static base only — importing Core's
+   PLUGIN_PERMISSIONS aggregator here formed an ESM cycle (aggregator → auth/index → this module →
+   aggregator) that crashed at module init in dev with a TDZ ReferenceError. CORE_PERMISSIONS already
+   lists the full base set; aggregating other plugins' dynamically-contributed perms into this catalog
+   is a follow-up (do it at render-time in PermissionsCatalog, not at module init). */
+const PERMISSIONS = CORE_PERMISSIONS;
 const PERM_KEYS = PERMISSIONS.map(p => p.key);
 
 /* ---- roles (admin can add more; the 4 below are system roles) ---- */

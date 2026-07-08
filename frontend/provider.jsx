@@ -44,7 +44,7 @@ export function AuthAdmin({ ctx, children }) {
 
   const Sys = {
     users, roles, rolePerms, userPerms, audit, can, T, t, language, go,
-    me: ctx.me || null,
+    me: ctx.me || {},   // never null: RBAC screens read Sys.me.id (e.g. don't-suspend-self guard)
     openUserForm: (u) => setUserForm(u || {}),
     saveUser: (f, edit) => {
       if (edit) { setUsers(prev => prev.map(x => x.id === f.id ? { ...x, ...f } : x)); logAudit(); }
