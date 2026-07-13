@@ -2,3 +2,6 @@
 # build when auth is enabled). sqlalchemy comes from the postgres tool it depends on.
 PyJWT==2.13.0
 argon2-cffi==25.1.0
+# TEST-only: the login_throttle unit/route tests run in-process against a real fake Redis (no live
+# sidecar). Baked into the image like the kernel's pytest tooling; harmless in a running deploy.
+fakeredis==2.36.2

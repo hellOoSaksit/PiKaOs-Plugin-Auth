@@ -10,13 +10,13 @@ to the `pikaos_refresh` cookie when that header is absent). The web cookie flow 
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
 from ...core.db import get_db
 from ...core.identity import get_current_user
-from . import auth_service, rbac_service
+from . import auth_service, login_throttle, rbac_service
 from .models import User
 from .schemas import ForgotIn, LoginIn, LoginResult, TokenOut, UserOut
 from .auth_service import InactiveAccount, InvalidCredentials, Session
@@ -67,19 +67,40 @@ def _session_response(
     return result
 
 
+def _client_ip(request: Request) -> str:
+    # The peer socket address — correct for the direct-connect desktop/dev client (the only deployment
+    # today). CAVEAT: behind a reverse proxy (the deferred web/nginx path) every request carries the
+    # proxy's IP, so the per-IP cap would throttle globally; revive that path with trusted X-Forwarded-For
+    # parsing before it ships. The per-ACCOUNT cap is proxy-independent and stays the primary guard.
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/login", response_model=LoginResult)
 async def login(
     body: LoginIn,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
     x_client_mode: str | None = Header(default=None),
 ) -> LoginResult:
+    ip = _client_ip(request)
+    # Brute-force guard: refuse before touching credentials once the account or the IP is over its cap.
+    # A generic 429 (never "which of the two tripped", never whether the account exists) + Retry-After.
+    retry_after = await login_throttle.blocked_for(body.usernameOrEmail, ip)
+    if retry_after > 0:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many login attempts, try again later",
+            headers={"Retry-After": str(retry_after)},
+        )
     try:
         session = await auth_service.login(db, body.usernameOrEmail, body.password)
     except InvalidCredentials:
+        await login_throttle.record_failure(body.usernameOrEmail, ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
     except InactiveAccount:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
+    await login_throttle.reset(body.usernameOrEmail)  # a good login clears the account's failure streak
     perms = await rbac_service.get_effective_perms(db, session.user)
     return _session_response(response, session, perms, token_mode=_is_token_mode(x_client_mode))
 

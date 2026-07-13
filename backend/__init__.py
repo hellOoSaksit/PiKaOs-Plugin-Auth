@@ -31,9 +31,11 @@ def register(ctx) -> None:
     degrades exactly like a Redis outage (fail-open reads)."""
     from ...core.contracts import IDENTITY, POSTGRES_CONNECTION, REDIS_CONNECTION
     from .provider import AuthIdentityProvider
-    from . import session_store
+    from . import login_throttle, session_store
 
-    session_store.bind(ctx.container.resolve(REDIS_CONNECTION))
+    redis_client = ctx.container.resolve(REDIS_CONNECTION)
+    session_store.bind(redis_client)
+    login_throttle.bind(redis_client)  # the login brute-force guard shares the same Redis client
     # Zero-datastore kernel: the session factory comes from the postgres Tool's contract (a declared
     # dependency, so it registered first), not a kernel SessionLocal passed on ctx.
     sf = ctx.container.resolve(POSTGRES_CONNECTION)["session_factory"]
