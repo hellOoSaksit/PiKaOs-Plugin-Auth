@@ -98,10 +98,24 @@ export function Profile({ me = {}, t, onSignOut }) {
   };
 
   return (
-    <div className="profile-wrap" data-no-lex>
+    <div className="profile-wrap" data-no-lex style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <button type="button" className="ub-profile-btn" title={t("utilitybar.profile")} onClick={() => setOpen(o => !o)}>
         <span className="ub-avatar-wrap"><Av a={me.avatar} /></span>
       </button>
+      {/* Sign-out is buried in the profile card too; surfacing it here as a visible bar control means one
+          click to leave (no modal). Reuses the avatar button's chrome (44px) so it aligns in the bar, but
+          ghosted so it reads as a secondary action, not a second identity. Plugins ship no CSS — hence inline. */}
+      {onSignOut && (
+        <button type="button" className="ub-profile-btn" title={t("profile.signOut")} aria-label={t("profile.signOut")}
+          onClick={() => onSignOut()}
+          style={{ background: "transparent", color: "var(--ink-2)", border: "2px solid var(--line)", display: "grid", placeItems: "center" }}>
+          <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={2}
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M14 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H14" />
+            <path d="M10.5 12h9.5M17 8.5l3.5 3.5L17 15.5" />
+          </svg>
+        </button>
+      )}
       {open && portalBody(
         <div className="profile-overlay" onClick={() => setOpen(false)} data-no-lex>
           <div className="profile-modal" onClick={e => e.stopPropagation()}>
