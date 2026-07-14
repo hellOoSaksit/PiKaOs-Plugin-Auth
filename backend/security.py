@@ -21,6 +21,35 @@ from ...core.config import settings
 _hasher = PasswordHasher()
 
 
+# A small blocklist of well-known weak secrets (NIST SP 800-63B Rev 4 SHALL-check). Lower-cased; the
+# check is case-insensitive. This is a floor, not a breach corpus — a Have-I-Been-Pwned k-anonymity
+# lookup is the eventual upgrade (tracked as a follow-up), but it must never be a login-time dependency.
+_COMMON_PASSWORDS = frozenset(
+    {
+        "123456789012", "1234567890123", "12345678901234", "123456789012345",
+        "password1234", "password12345", "passwordpassword", "qwertyuiop123",
+        "administrator", "iloveyou1234", "letmein12345", "welcome12345",
+    }
+)
+
+
+class WeakPassword(ValueError):
+    """Password fails the strength policy (too short, or a known-common/compromised secret)."""
+
+
+def validate_password_strength(password: str) -> None:
+    """Enforce the password policy — call on create/change, NEVER on login or system seeding.
+
+    NIST SP 800-63B Rev 4-aligned: a configurable minimum length (`settings.password_min_length`) + a
+    common-password blocklist, and deliberately NO composition rules (no forced character-class mixes).
+    Length is measured in Unicode code points; spaces and all printable characters are allowed. Raises
+    WeakPassword on a violation; returns None when the password is acceptable."""
+    if len(password) < settings.password_min_length:
+        raise WeakPassword(f"Password must be at least {settings.password_min_length} characters")
+    if password.lower() in _COMMON_PASSWORDS:
+        raise WeakPassword("Password is too common — choose a less predictable one")
+
+
 def hash_password(password: str) -> str:
     return _hasher.hash(password)
 
