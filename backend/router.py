@@ -11,6 +11,7 @@ to the `pikaos_refresh` cookie when that header is absent). The web cookie flow 
 from __future__ import annotations
 
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
@@ -173,6 +174,12 @@ async def bootstrap_admin(body: BootstrapAdminIn, db: AsyncSession = Depends(get
         security.validate_password_strength(body.password)
     except security.WeakPassword as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
-    await users_repo.create_admin(db, body.username, security.hash_password(body.password))
+    try:
+        await users_repo.create_admin(db, body.username, security.hash_password(body.password))
+    except IntegrityError:
+        # A concurrent bootstrap already created the owner (unique username/email) — map the DB
+        # constraint to this endpoint's own one-owner contract instead of leaking a raw 500.
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "already initialized")
     setup_state.clear()   # single-use: the window closes the moment the owner exists
     return {"ok": True}

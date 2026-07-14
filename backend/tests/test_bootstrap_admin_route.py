@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 
 from app.core import kernel_state, setup_state
 from app.core.config import settings
@@ -84,3 +85,45 @@ def test_confirm_mismatch_is_422(client):
     resp = _post(client, confirmPassword="different horse battery staple")
     assert resp.status_code == 422
     assert client._created == []
+
+
+def test_concurrent_duplicate_username_is_409_not_500(tmp_path, monkeypatch):
+    """TOCTOU: two requests both pass the count_users()==0 check before either commits. The loser's
+    INSERT hits the users.username/email unique constraint — that IntegrityError must map to this
+    endpoint's own 409 contract (not leak as a raw 500), and the code must stay alive since no owner
+    was actually created by THIS request."""
+    monkeypatch.setattr(kernel_state.settings, "kernel_state_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "password_min_length", 12, raising=False)
+    setup_state.write(CODE, "tok")
+    setup_state.write_auth_mode("login")
+
+    async def _count(db):
+        return 0   # still 0 from this request's point of view — the race is in the INSERT, not the count
+
+    async def _create(db, username, password_hash):
+        raise IntegrityError("stmt", {}, Exception("dup"))
+
+    monkeypatch.setattr(users_repo, "count_users", _count)
+    monkeypatch.setattr(users_repo, "create_admin", _create)
+
+    class _FakeDB:
+        rolled_back = False
+
+        async def rollback(self):
+            self.rolled_back = True
+
+    fake_db = _FakeDB()
+
+    app = FastAPI()
+    app.include_router(router)
+
+    async def _fake_db():
+        yield fake_db
+
+    app.dependency_overrides[get_db] = _fake_db
+    with TestClient(app) as c:
+        resp = c.post("/api/auth/bootstrap-admin", json=GOOD)
+
+    assert resp.status_code == 409
+    assert fake_db.rolled_back is True
+    assert setup_state.read_code() == CODE   # create failed here: the window must stay open
