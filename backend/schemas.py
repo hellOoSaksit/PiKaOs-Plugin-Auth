@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LoginIn(BaseModel):
@@ -45,3 +45,19 @@ class LoginResult(BaseModel):
     token: TokenOut
     user: UserOut
     refreshToken: str | None = None  # populated only in token mode (desktop); web relies on the cookie
+
+
+class BootstrapAdminIn(BaseModel):
+    """Create-first-admin form. setupCode is this boot's console code (constant-time-checked
+    server-side); username/password are the owner's hand-picked credentials."""
+
+    setupCode: str = Field(min_length=1)
+    username: str = Field(min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: str = Field(min_length=1)          # real strength check = validate_password_strength
+    confirmPassword: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _confirm_matches(self):
+        if self.password != self.confirmPassword:
+            raise ValueError("passwords do not match")
+        return self

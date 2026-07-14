@@ -25,3 +25,14 @@ async def get_by_login(db: AsyncSession, username_or_email: str) -> User | None:
 
 async def count_users(db: AsyncSession) -> int:
     return (await db.execute(select(func.count()).select_from(User))).scalar_one()
+
+
+async def create_admin(db: AsyncSession, username: str, password_hash: str) -> User:
+    """The bootstrap owner. Email is a derived placeholder (no email field on the first-admin form);
+    the admin can change it once profile editing exists."""
+    user = User(username=username, email=f"{username}@local", display=username,
+                role="admin", status="active", password_hash=password_hash)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user

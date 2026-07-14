@@ -16,9 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.db import get_db
 from ...core.identity import get_current_user
-from . import auth_service, login_throttle, rbac_service
+from . import auth_service, login_throttle, rbac_service, security, users_repo
 from .models import User
-from .schemas import ForgotIn, LoginIn, LoginResult, TokenOut, UserOut
+from .schemas import BootstrapAdminIn, ForgotIn, LoginIn, LoginResult, TokenOut, UserOut
 from .auth_service import InactiveAccount, InvalidCredentials, Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -153,4 +153,26 @@ async def me(
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 async def forgot_password(body: ForgotIn) -> dict:
     # Always 200 — never reveal whether an account exists. Real email = future milestone.
+    return {"ok": True}
+
+
+@router.post("/bootstrap-admin", status_code=status.HTTP_201_CREATED)
+async def bootstrap_admin(body: BootstrapAdminIn, db: AsyncSession = Depends(get_db)) -> dict:
+    """One-shot create-first-admin (2026-07-14 spec): auth is enabled but has zero users, and the
+    operator proves console access with this boot's setup code. No throttle by design — the code is
+    40-bit, rotates every boot, and dies on success (same call as the 2026-07-02 setup-code design).
+    Order: owner-exists first (the window being closed is public knowledge), then the code
+    (constant-time via setup_state), then password strength."""
+    from ...core import setup_state  # kernel state seam, same import style as identity's usage
+
+    if await users_repo.count_users(db) > 0:
+        raise HTTPException(status.HTTP_409_CONFLICT, "already initialized")
+    if not setup_state.verify_code(body.setupCode):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid setup code")
+    try:
+        security.validate_password_strength(body.password)
+    except security.WeakPassword as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
+    await users_repo.create_admin(db, body.username, security.hash_password(body.password))
+    setup_state.clear()   # single-use: the window closes the moment the owner exists
     return {"ok": True}
