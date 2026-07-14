@@ -21,3 +21,7 @@ async def get_by_login(db: AsyncSession, username_or_email: str) -> User | None:
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def count_users(db: AsyncSession) -> int:
+    return (await db.execute(select(func.count()).select_from(User))).scalar_one()
