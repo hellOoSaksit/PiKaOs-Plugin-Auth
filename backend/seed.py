@@ -76,15 +76,19 @@ async def seed(session_factory) -> None:
     factory (the zero-datastore kernel has no SessionLocal). For a standalone run, `__main__` below builds
     a throwaway engine from settings."""
     sf = session_factory
-    password_hash = security.hash_password(settings.seed_password)
     async with sf() as db:
-        # --- users ---
-        existing_users = set((await db.execute(select(User.username))).scalars().all())
+        # --- users (dev-only, opt-in) ---
+        # A fresh install gets its first account from the first-admin bootstrap window (see
+        # migrate.ensure_bootstrap_window), NOT from a seeded shared password. Dev stacks whose live
+        # tests rely on somchai/… set SEED_DEV_USERS=1.
         users_added = 0
-        for u in SEED_USERS:
-            if u["username"] not in existing_users:
-                db.add(User(password_hash=password_hash, **u))
-                users_added += 1
+        if settings.seed_dev_users:
+            password_hash = security.hash_password(settings.seed_password)
+            existing_users = set((await db.execute(select(User.username))).scalars().all())
+            for u in SEED_USERS:
+                if u["username"] not in existing_users:
+                    db.add(User(password_hash=password_hash, **u))
+                    users_added += 1
 
         # --- permissions (from the aggregated plugin catalog, not a hardcoded list) ---
         catalog = permission_catalog()
@@ -111,21 +115,22 @@ async def seed(session_factory) -> None:
 
         await db.commit()  # commit users first so we can resolve usernames -> ids
 
-        # --- user_perms (needs user ids) ---
-        username_to_id = dict((await db.execute(select(User.username, User.id))).all())
-        existing_up = set((await db.execute(select(UserPerm.user_id, UserPerm.perm_key))).all())
+        # --- user_perms (needs user ids; dev-only like the users they attach to) ---
         up_added = 0
-        for username, overrides in SEED_USER_PERMS.items():
-            uid = username_to_id.get(username)
-            if uid is None:
-                continue
-            for perm_key, allow in overrides.items():
-                if perm_key in catalog_key_set and (uid, perm_key) not in existing_up:
-                    db.add(UserPerm(user_id=uid, perm_key=perm_key, allow=allow))
-                    up_added += 1
+        if settings.seed_dev_users:
+            username_to_id = dict((await db.execute(select(User.username, User.id))).all())
+            existing_up = set((await db.execute(select(UserPerm.user_id, UserPerm.perm_key))).all())
+            for username, overrides in SEED_USER_PERMS.items():
+                uid = username_to_id.get(username)
+                if uid is None:
+                    continue
+                for perm_key, allow in overrides.items():
+                    if perm_key in catalog_key_set and (uid, perm_key) not in existing_up:
+                        db.add(UserPerm(user_id=uid, perm_key=perm_key, allow=allow))
+                        up_added += 1
         await db.commit()
 
-        print(f"[seed:auth] users +{users_added} (had {len(existing_users)}) · "
+        print(f"[seed:auth] users +{users_added} (dev-seed {'on' if settings.seed_dev_users else 'off'}) · "
               f"perms {len(catalog_keys)} (from catalog) · roles {len(SEED_ROLES)} · user_perms +{up_added}")
 
 
