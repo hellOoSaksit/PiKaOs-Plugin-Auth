@@ -3,6 +3,7 @@
   "name": "Authentication & RBAC",
   "version": "0.1.0",
   "coreVersion": "^0.1.0",
+  "kind": "capability",
   "dependencies": [
     "postgres",
     "redis"
@@ -54,6 +55,12 @@
       "group": "Admin",
       "name_th": "ติดตั้ง/เปิด-ปิด/ถอนปลั๊กอิน",
       "name_en": "Install / enable / uninstall plugins"
+    },
+    {
+      "key": "options.manage",
+      "group": "Admin",
+      "name_th": "จัดการการตั้งค่า/เมนู",
+      "name_en": "Manage app settings & menu"
     }
   ],
   "routes": [
