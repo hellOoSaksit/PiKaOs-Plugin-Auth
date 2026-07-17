@@ -88,18 +88,8 @@ function ownerOf(agentId) { return AGENT_OWNER[agentId] || "u_somchai"; }
 
 /* Audit rows are read live from Core's /api/audit trail (v2). No seed is kept here — a security
    screen must never render fabricated rows, so the AuditLog fetches real data and shows an error
-   state on failure instead of falling back to mock entries. */
-
-const ACTION_META = {
-  "user.create":      { icon: "➕", tone: "ok",   th: "สร้างสมาชิก",      en: "Created user" },
-  "user.suspend":     { icon: "⛔", tone: "warn", th: "ระงับสมาชิก",      en: "Suspended user" },
-  "user.update":      { icon: "✎",  tone: "info", th: "แก้ไขสมาชิก",      en: "Edited user" },
-  "quota.update":     { icon: "🔵", tone: "info", th: "ปรับโควตา",        en: "Updated quota" },
-  "role.update":      { icon: "🔑", tone: "info", th: "แก้บทบาท",         en: "Updated role" },
-  "permission.grant": { icon: "✅", tone: "ok",   th: "ให้สิทธิ์",         en: "Granted permission" },
-  "permission.deny":  { icon: "🚫", tone: "warn", th: "ถอนสิทธิ์",         en: "Denied permission" },
-  "workflow.toggle":  { icon: "⚗️", tone: "info", th: "สลับเวิร์กโฟลว์",    en: "Toggled workflow" },
-};
+   state on failure instead of falling back to mock entries. (The old ACTION_META label map died with
+   the seed rewire — the live trail carries its own action strings, localized by the screen.) */
 
 /* ---- persistence ---- */
 const U_KEYS = { users: "guildos-users-v2", rolePerms: "guildos-roleperms-v2", userPerms: "guildos-userperms-v2", roles: "guildos-roles-v2" };
@@ -129,11 +119,10 @@ function roleByKey(roles, key) { return roles.find(r => r.key === key) || { key,
 
 Object.assign(window, {
   PERMISSIONS, PERM_KEYS, ROLES_SEED, ROLE_PERMS_SEED, USERS_SEED, USER_PERMS_SEED,
-  ACTION_META, AGENT_OWNER, ownerOf, loadU, saveU, resolvePerms, fmtTok, usagePct, userById, roleByKey,
+  AGENT_OWNER, ownerOf, loadU, saveU, resolvePerms, fmtTok, usagePct, userById, roleByKey,
 });
 
 export {
-  ACTION_META,
   AGENT_OWNER,
   PERMISSIONS,
   PERM_KEYS,

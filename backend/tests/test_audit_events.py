@@ -15,7 +15,7 @@ from app.core import audit, kernel_state
 from app.core.config import settings
 from app.core.db import get_db
 from app.plugins.auth import auth_service, login_throttle, rbac_service, security
-from app.plugins.auth.auth_service import InvalidCredentials, Session
+from app.plugins.auth.auth_service import InactiveAccount, InvalidCredentials, Session
 from app.plugins.auth.models import User
 from app.plugins.auth.router import router
 
@@ -77,6 +77,19 @@ def test_throttled_login_is_audited(app_client, monkeypatch):
     _login(app_client); _login(app_client)             # burn the per-account cap (2 in this fixture)
     assert _login(app_client).status_code == 429
     assert audit.read(action="auth.login.throttled")
+
+
+def test_login_to_a_suspended_account_is_audited(app_client, monkeypatch):
+    # A probe against a suspended account is forensic signal — record it (auth.login.inactive), never
+    # the password.
+    async def _inactive(*_a, **_k):
+        raise InactiveAccount()
+    monkeypatch.setattr(auth_service, "login", _inactive)
+    assert _login(app_client).status_code == 403
+    rows = audit.read(action="auth.login.inactive")
+    assert rows and rows[0]["target"] == "somchai"
+    import json as _json
+    assert _PASSWORD not in _json.dumps(audit.read())
 
 
 def test_successful_login_is_audited_with_the_user_id(app_client, monkeypatch):

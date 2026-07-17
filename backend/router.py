@@ -106,6 +106,9 @@ async def login(
         audit.log("anonymous", "auth.login.failed", body.usernameOrEmail)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
     except InactiveAccount:
+        # A suspended account being probed is a forensic signal worth keeping — it was the one login
+        # outcome the trail didn't record. (Extends the spec's §1 action list with auth.login.inactive.)
+        audit.log("anonymous", "auth.login.inactive", body.usernameOrEmail)
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
     await login_throttle.reset(body.usernameOrEmail)  # a good login clears the account's failure streak
     audit.log(str(session.user.id), "auth.login", body.usernameOrEmail)
