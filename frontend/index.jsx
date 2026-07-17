@@ -1,13 +1,15 @@
 /* Auth plugin — frontend descriptor. Contributes the RBAC/identity management screens (User Management,
-   Roles, Permissions, Audit) plus the utility bar's account control to Core through the plugin seam
-   (import.meta.glob discovery). Present only when this plugin is linked; a kernel-only Core ships none
-   of it. render(ctx) gets Core seams { t, can, language, go }; the plugin owns all RBAC state via
-   AuthAdmin. User detail is INTERNAL to the admin route (list<->detail), not a Core route. */
+   Roles, Permissions, Audit), the utility bar's account control, and the create-first-admin install
+   window to Core through the plugin seam (import.meta.glob discovery). Present only when this plugin is
+   linked; a kernel-only Core ships none of it. render(ctx) gets Core seams { t, can, language, go }; the
+   plugin owns all RBAC state via AuthAdmin. User detail is INTERNAL to the admin route (list<->detail),
+   not a Core route. */
 import React from 'react';
 const { useState } = React;
 import { AuthAdmin } from './provider.jsx';
 import { Admin } from './admin.jsx';
 import { Profile } from './profile.jsx';
+import { FirstAdmin } from './FirstAdmin.jsx';
 import { UserDetail, RolesPermissions, PermissionsCatalog, AuditLog } from './rbac.jsx';
 
 // Admin list <-> user detail, kept internal to the plugin (Core no longer holds userSel).
@@ -46,6 +48,13 @@ export default {
   ],
   // The utility bar's account control. Core renders nothing here until identity is installed.
   profile: (ctx) => <Profile me={ctx.me} t={ctx.t} onSignOut={ctx.onSignOut} />,
+  /* The install window's create-first-admin stage — this plugin booted ownerless and revived the
+     console setup code, so this plugin supplies the screen (same generic seam postgres uses for
+     'db-choice'; Core decides WHEN the stage is active, never WHAT renders). ctx.onDone(username,
+     password) hands back to Core's normal login path. */
+  bootstrapScreens: {
+    'first-admin': (ctx) => <FirstAdmin t={ctx.t} language={ctx.language} onLang={ctx.onLang} onDone={ctx.onDone} />,
+  },
   // CORE_PERMISSIONS (incl. the identity perms) moved with data-users.jsx and is shown by the
   // Permissions screen directly; re-contributing it here would double the catalog. Proper per-plugin
   // permission ownership (splitting CORE_PERMISSIONS across plugins) is a follow-up.

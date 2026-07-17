@@ -1,0 +1,24 @@
+{
+  "languageCode": "en",
+  "lexiconCode": "formal",
+  "translations": {
+    "firstadmin.kicker": "First-run · Create admin",
+    "firstadmin.title": "Create the first admin",
+    "firstadmin.subtitle": "Authentication is installed but has no users yet. Enter the setup code from the server console, then choose the administrator account.",
+    "firstadmin.code": "Setup code",
+    "firstadmin.codePh": "e.g.  PIKA-7F3A-K9QD",
+    "firstadmin.username": "Username",
+    "firstadmin.password": "Password",
+    "firstadmin.confirm": "Confirm password",
+    "firstadmin.submit": "Create admin",
+    "firstadmin.submitting": "Creating…",
+    "firstadmin.errEmpty": "Fill in every field.",
+    "firstadmin.errMismatch": "Passwords do not match.",
+    "firstadmin.errUsername": "Username must be 3-64 characters — letters, numbers, and . _ - only.",
+    "firstadmin.errCode": "That setup code is not valid. Check the latest code in the server console.",
+    "firstadmin.errWeak": "Password is too short or too common.",
+    "firstadmin.errClosed": "An administrator already exists — sign in instead.",
+    "firstadmin.errNetwork": "Cannot reach the server.",
+    "firstadmin.ok": "Admin created — signing in…"
+  }
+}

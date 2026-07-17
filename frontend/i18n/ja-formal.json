@@ -1,0 +1,24 @@
+{
+  "languageCode": "ja",
+  "lexiconCode": "formal",
+  "translations": {
+    "firstadmin.kicker": "初回起動 · 管理者を作成",
+    "firstadmin.title": "最初の管理者を作成",
+    "firstadmin.subtitle": "認証機能はインストール済みですが、まだユーザーがいません。サーバーコンソールに表示されたセットアップコードを入力し、管理者アカウントを設定してください。",
+    "firstadmin.code": "セットアップコード",
+    "firstadmin.codePh": "例:  PIKA-7F3A-K9QD",
+    "firstadmin.username": "ユーザー名",
+    "firstadmin.password": "パスワード",
+    "firstadmin.confirm": "パスワード（確認）",
+    "firstadmin.submit": "管理者を作成",
+    "firstadmin.submitting": "作成中…",
+    "firstadmin.errEmpty": "すべての項目を入力してください。",
+    "firstadmin.errMismatch": "パスワードが一致しません。",
+    "firstadmin.errUsername": "ユーザー名は3〜64文字で、英数字と . _ - のみ使用できます。",
+    "firstadmin.errCode": "このセットアップコードは無効です。サーバーコンソールで最新のコードを確認してください。",
+    "firstadmin.errWeak": "パスワードが短すぎるか、よく使われるものです。",
+    "firstadmin.errClosed": "管理者はすでに存在します — サインインしてください。",
+    "firstadmin.errNetwork": "サーバーに接続できません。",
+    "firstadmin.ok": "管理者を作成しました — サインイン中…"
+  }
+}

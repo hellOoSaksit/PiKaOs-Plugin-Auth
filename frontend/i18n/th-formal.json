@@ -1,0 +1,24 @@
+{
+  "languageCode": "th",
+  "lexiconCode": "formal",
+  "translations": {
+    "firstadmin.kicker": "เริ่มต้นครั้งแรก · สร้างผู้ดูแลระบบ",
+    "firstadmin.title": "สร้างผู้ดูแลระบบคนแรก",
+    "firstadmin.subtitle": "ระบบยืนยันตัวตนติดตั้งแล้วแต่ยังไม่มีผู้ใช้งาน กรอกรหัสตั้งค่าจากคอนโซลของเซิร์ฟเวอร์ แล้วเลือกบัญชีผู้ดูแลระบบ",
+    "firstadmin.code": "รหัสตั้งค่า",
+    "firstadmin.codePh": "เช่น  PIKA-7F3A-K9QD",
+    "firstadmin.username": "ชื่อผู้ใช้",
+    "firstadmin.password": "รหัสผ่าน",
+    "firstadmin.confirm": "ยืนยันรหัสผ่าน",
+    "firstadmin.submit": "สร้างผู้ดูแลระบบ",
+    "firstadmin.submitting": "กำลังสร้าง…",
+    "firstadmin.errEmpty": "กรุณากรอกข้อมูลให้ครบทุกช่อง",
+    "firstadmin.errMismatch": "รหัสผ่านไม่ตรงกัน",
+    "firstadmin.errUsername": "ชื่อผู้ใช้ต้องยาว 3-64 ตัวอักษร ใช้ได้เฉพาะตัวอักษร ตัวเลข และ . _ - เท่านั้น",
+    "firstadmin.errCode": "รหัสตั้งค่าไม่ถูกต้อง กรุณาตรวจรหัสล่าสุดที่คอนโซลของเซิร์ฟเวอร์",
+    "firstadmin.errWeak": "รหัสผ่านสั้นเกินไปหรือคาดเดาง่ายเกินไป",
+    "firstadmin.errClosed": "มีผู้ดูแลระบบอยู่แล้ว — กรุณาเข้าสู่ระบบแทน",
+    "firstadmin.errNetwork": "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้",
+    "firstadmin.ok": "สร้างผู้ดูแลระบบสำเร็จ — กำลังเข้าสู่ระบบ…"
+  }
+}
