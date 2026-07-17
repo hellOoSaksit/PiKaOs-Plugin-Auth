@@ -75,16 +75,20 @@ async def rotate(db: AsyncSession, refresh_token: str | None) -> Session:
     return await _issue_session(db, user)
 
 
-async def revoke(refresh_token: str | None, authorization_header: str | None) -> None:
-    """Best-effort logout: drop the refresh token and deny the current access jti."""
+async def revoke(refresh_token: str | None, authorization_header: str | None) -> str | None:
+    """Best-effort logout: drop the refresh token and deny the current access jti.
+    Returns the access token's subject (user id) when it decodes, for the audit trail."""
+    sub: str | None = None
     if refresh_token:
         await redis_client.revoke_refresh_token(refresh_token)
     if authorization_header and authorization_header.lower().startswith("bearer "):
         try:
             payload = security.decode_access_token(authorization_header.split(" ", 1)[1])
+            sub = payload.get("sub")
             jti = payload.get("jti")
             ttl = int(payload.get("exp", 0)) - int(datetime.now(timezone.utc).timestamp())
             if jti and ttl > 0:
                 await redis_client.deny_access_jti(jti, ttl)
         except jwt.PyJWTError:
             pass
+    return sub

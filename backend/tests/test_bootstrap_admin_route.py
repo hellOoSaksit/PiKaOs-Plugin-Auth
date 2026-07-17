@@ -60,6 +60,8 @@ def test_creates_the_owner_and_kills_the_code(client):
     assert username == "somchai"
     assert security.verify_password(GOOD["password"], password_hash)   # stored hashed, verifiable
     assert setup_state.read_code() is None                             # single-use: window closed
+    from app.core import audit
+    assert audit.read(action="auth.bootstrap_admin")
 
 
 def test_wrong_code_is_401_and_creates_nothing(client):

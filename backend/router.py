@@ -14,6 +14,7 @@ from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core import audit
 from ...core.config import settings
 from ...core.db import get_db
 from ...core.identity import get_current_user
@@ -89,6 +90,7 @@ async def login(
     # A generic 429 (never "which of the two tripped", never whether the account exists) + Retry-After.
     retry_after = await login_throttle.blocked_for(body.usernameOrEmail, ip)
     if retry_after > 0:
+        audit.log("anonymous", "auth.login.throttled", body.usernameOrEmail)
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "Too many login attempts, try again later",
@@ -98,10 +100,12 @@ async def login(
         session = await auth_service.login(db, body.usernameOrEmail, body.password)
     except InvalidCredentials:
         await login_throttle.record_failure(body.usernameOrEmail, ip)
+        audit.log("anonymous", "auth.login.failed", body.usernameOrEmail)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
     except InactiveAccount:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is not active")
     await login_throttle.reset(body.usernameOrEmail)  # a good login clears the account's failure streak
+    audit.log(str(session.user.id), "auth.login", body.usernameOrEmail)
     perms = await rbac_service.get_effective_perms(db, session.user)
     return _session_response(response, session, perms, token_mode=_is_token_mode(x_client_mode))
 
@@ -135,7 +139,8 @@ async def logout(
     x_refresh_token: str | None = Header(default=None),
 ) -> Response:
     effective_refresh = x_refresh_token or pikaos_refresh
-    await auth_service.revoke(effective_refresh, authorization)
+    sub = await auth_service.revoke(effective_refresh, authorization)
+    audit.log(sub or "unknown", "auth.logout")
     if not _is_token_mode(x_client_mode):
         response.delete_cookie(settings.refresh_cookie_name, path=COOKIE_PATH)
     response.status_code = status.HTTP_204_NO_CONTENT
@@ -181,5 +186,6 @@ async def bootstrap_admin(body: BootstrapAdminIn, db: AsyncSession = Depends(get
         # constraint to this endpoint's own one-owner contract instead of leaking a raw 500.
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "already initialized")
+    audit.log(body.username, "auth.bootstrap_admin")
     setup_state.clear()   # single-use: the window closes the moment the owner exists
     return {"ok": True}
