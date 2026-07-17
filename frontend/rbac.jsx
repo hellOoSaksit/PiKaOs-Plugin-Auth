@@ -1,6 +1,6 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-rbac.jsx). */
 import React from 'react';
-const { useState } = React;
+const { useState, useEffect } = React;
 import { Btn, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/components.jsx';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
@@ -329,7 +329,10 @@ function RolesPermissions({ Sys }) {
 
 /* ---------------- AUDIT LOG ---------------- */
 function AuditLog({ Sys }) {
-  const { audit, auditError, T } = Sys;
+  const { audit, auditError, loadAudit, T } = Sys;
+  // The provider wraps every auth route, so it must not fetch the trail on its own mount — only this
+  // screen needs it, and /audit is permission-gated. Ask for it here instead.
+  useEffect(() => { loadAudit(); }, [loadAudit]);
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [date, setDate] = useState(null);   // selected day (null = every day)

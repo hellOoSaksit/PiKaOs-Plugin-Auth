@@ -35,16 +35,18 @@ export function AuthAdmin({ ctx, children }) {
   const [userPerms, setUserPerms] = useState(() => loadU('userPerms', USER_PERMS_SEED));
   // Real trail from Core's /api/audit (v2). No seed fallback — a security screen must never
   // render fabricated rows; on any fetch error the screen shows its error state instead.
+  //
+  // Fetched on DEMAND, not on mount: this provider wraps every auth route, so a mount-time fetch hit
+  // /audit when you opened Users or Roles too — and `/audit` is gated on `audit.view`, so an admin
+  // without that permission collected a 403 on every screen in the plugin. Only AuditLog calls this.
   const [audit, setAudit] = useState([]);
   const [auditError, setAuditError] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    if (!ctx.api?.raw) { setAuditError(true); return undefined; }
+  const loadAudit = React.useCallback(() => {
+    if (!ctx.api?.raw) { setAuditError(true); return; }
     ctx.api.raw('/audit?limit=200')
-      .then((rows) => { if (alive) setAudit(Array.isArray(rows) ? rows : []); })
-      .catch(() => { if (alive) setAuditError(true); });
-    return () => { alive = false; };
-  }, []);
+      .then((rows) => setAudit(Array.isArray(rows) ? rows : []))
+      .catch(() => setAuditError(true));
+  }, [ctx.api]);
   const [userForm, setUserForm] = useState(null);
 
   useEffect(() => { saveU('users', users); }, [users]);
@@ -53,7 +55,7 @@ export function AuthAdmin({ ctx, children }) {
   useEffect(() => { saveU('userPerms', userPerms); }, [userPerms]);
 
   const Sys = {
-    users, roles, rolePerms, userPerms, audit, auditError, can, T, t, language, go,
+    users, roles, rolePerms, userPerms, audit, auditError, loadAudit, can, T, t, language, go,
     me: ctx.me || {},   // never null: RBAC screens read Sys.me.id (e.g. don't-suspend-self guard)
     openUserForm: (u) => setUserForm(u || {}),
     saveUser: (f, edit) => {
