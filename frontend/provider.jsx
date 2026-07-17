@@ -1,13 +1,14 @@
-/* Auth plugin — RBAC state container. Owns users/roles/rolePerms/userPerms/audit (seeded from
-   data-users.jsx, persisted to localStorage exactly as Core did) and the mutation bundle the RBAC
-   screens consume as `Sys`. Rendered per plugin route via a render-prop; state stays consistent across
-   routes because every mutation persists immediately and each mount re-reads localStorage. Also renders
-   the UserForm overlay (opened via Sys.openUserForm). `logAudit` is a no-op, matching Core (audit is
-   display-only from seed). */
+/* Auth plugin — RBAC state container. Owns users/roles/rolePerms/userPerms (persisted to localStorage
+   exactly as Core did) and the mutation bundle the RBAC screens consume as `Sys`. Audit rows come from
+   Core's real trail (GET /api/audit via ctx.api.raw), fetched on mount — a security screen must never
+   fabricate rows, so on any fetch error the AuditLog screen renders its error state instead of a seed.
+   Rendered per plugin route via a render-prop; state stays consistent across routes because every
+   mutation persists immediately and each mount re-reads localStorage. Also renders the UserForm overlay
+   (opened via Sys.openUserForm). */
 import React from 'react';
 const { useState, useEffect } = React;
 import {
-  USERS_SEED, ROLES_SEED, ROLE_PERMS_SEED, USER_PERMS_SEED, AUDIT_SEED,
+  USERS_SEED, ROLES_SEED, ROLE_PERMS_SEED, USER_PERMS_SEED,
   loadU, saveU,
 } from './data-users.jsx';
 import { UserForm } from './rbac.jsx';
@@ -32,7 +33,18 @@ export function AuthAdmin({ ctx, children }) {
     return out;
   });
   const [userPerms, setUserPerms] = useState(() => loadU('userPerms', USER_PERMS_SEED));
-  const [audit] = useState(() => loadU('audit', AUDIT_SEED));
+  // Real trail from Core's /api/audit (v2). No seed fallback — a security screen must never
+  // render fabricated rows; on any fetch error the screen shows its error state instead.
+  const [audit, setAudit] = useState([]);
+  const [auditError, setAuditError] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!ctx.api?.raw) { setAuditError(true); return undefined; }
+    ctx.api.raw('/audit?limit=200')
+      .then((rows) => { if (alive) setAudit(Array.isArray(rows) ? rows : []); })
+      .catch(() => { if (alive) setAuditError(true); });
+    return () => { alive = false; };
+  }, []);
   const [userForm, setUserForm] = useState(null);
 
   useEffect(() => { saveU('users', users); }, [users]);
@@ -40,18 +52,15 @@ export function AuthAdmin({ ctx, children }) {
   useEffect(() => { saveU('rolePerms', rolePerms); }, [rolePerms]);
   useEffect(() => { saveU('userPerms', userPerms); }, [userPerms]);
 
-  const logAudit = () => {};
-
   const Sys = {
-    users, roles, rolePerms, userPerms, audit, can, T, t, language, go,
+    users, roles, rolePerms, userPerms, audit, auditError, can, T, t, language, go,
     me: ctx.me || {},   // never null: RBAC screens read Sys.me.id (e.g. don't-suspend-self guard)
     openUserForm: (u) => setUserForm(u || {}),
     saveUser: (f, edit) => {
-      if (edit) { setUsers(prev => prev.map(x => x.id === f.id ? { ...x, ...f } : x)); logAudit(); }
+      if (edit) { setUsers(prev => prev.map(x => x.id === f.id ? { ...x, ...f } : x)); }
       else {
         const id = 'u_' + String(f.username || ('user' + Date.now())).toLowerCase();
         setUsers(prev => [...prev, { ...f, id, used: 0, lastLogin: T('never', 'ยังไม่เข้า'), joined: T('just now', 'เพิ่งสร้าง') }]);
-        logAudit();
       }
     },
     toggleSuspend: (u) => {

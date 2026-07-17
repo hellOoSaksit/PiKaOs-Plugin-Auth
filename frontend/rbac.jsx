@@ -5,7 +5,7 @@ import { Btn, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../co
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
-import { ACTION_META, PERMISSIONS, fmtTok, resolvePerms, roleByKey, usagePct, userById } from './data-users.jsx';
+import { PERMISSIONS, fmtTok, resolvePerms, roleByKey, usagePct, userById } from './data-users.jsx';
 import { AVATAR_PRESETS } from './profile.jsx';
 import { Admin, RoleBadge, StatusPill } from './admin.jsx';
 
@@ -329,55 +329,54 @@ function RolesPermissions({ Sys }) {
 
 /* ---------------- AUDIT LOG ---------------- */
 function AuditLog({ Sys }) {
-  const { audit, users, roles, T } = Sys;
+  const { audit, auditError, T } = Sys;
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
-  const [date, setDate] = useState(null);   // วันที่เลือกจาก DatePicker (null = ทุกวัน)
-  const name = (id, type) => type === "role"
-    ? (() => { const r = roleByKey(roles, id); return T(r.en, r.th); })()
-    : (userById(users, id) || { display: id }).display;
+  const [date, setDate] = useState(null);   // selected day (null = every day)
 
-  // relative time strings → a real Date (now − parsed offset) so the DatePicker can match a day
-  const deriveDate = (s) => {
-    s = String(s || ""); const now = new Date();
-    if (/เมื่อวาน|yesterday/i.test(s)) { const d = new Date(now); d.setDate(d.getDate() - 1); return d; }
-    const dm = s.match(/(\d+)\s*(?:วัน|day)/i);
-    if (dm) { const d = new Date(now); d.setDate(d.getDate() - (+dm[1])); return d; }
-    return now;   // นาที/ชม./เมื่อสักครู่ = วันนี้
+  const PREFIX_PILL = {
+    plugin: ["Plugins", "ปลั๊กอิน"], settings: ["Settings", "ตั้งค่า"], mcp: ["MCP", "MCP"],
+    auth: ["Sign-in", "การเข้าระบบ"], gitcred: ["Git credentials", "กุญแจ Git"],
   };
-  const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-  const ACTION_PILL = {
-    user: ["User", "สมาชิก"], quota: ["Quota", "โควตา"], role: ["Role", "บทบาท"],
-    permission: ["Permission", "สิทธิ์"], workflow: ["Workflow", "เวิร์กโฟลว์"],
-  };
-  const actionTypes = ["all", "user", "quota", "role", "permission", "workflow"];
+  const actionTypes = ["all", ...Object.keys(PREFIX_PILL)];
+  const prefixOf = (action) => String(action || "").split(".")[0];
+  const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
   const query = q.trim().toLowerCase();
   const list = audit.filter(e => {
-    if (filter !== "all" && !e.action.startsWith(filter)) return false;
-    if (date && !sameDay(deriveDate(e.time), date)) return false;
+    if (filter !== "all" && prefixOf(e.action) !== filter) return false;
+    if (date && !sameDay(new Date(e.at), date)) return false;
     if (query) {
-      const m = ACTION_META[e.action] || { th: e.action, en: e.action };
-      const hay = [name(e.actor, "user"), name(e.target, e.targetType), e.meta, T(m.en, m.th), e.action, e.time]
-        .join(" ").toLowerCase();
+      const hay = [e.actor, e.action, e.target, JSON.stringify(e.detail || {})].join(" ").toLowerCase();
       if (!hay.includes(query)) return false;
     }
     return true;
   });
   const hasFilter = filter !== "all" || !!date || !!query;
 
+  if (auditError) {
+    return (
+      <div className="content-pad fade-in">
+        <PageHead kicker={T("Administration · Audit", "ผู้ดูแลระบบ · ตรวจสอบ")} title={T("Audit Log", "บันทึกการตรวจสอบ")} tag="local"
+          desc={T("Every admin-plane change — who did what, and when. Read from the server's audit trail.",
+                  "ทุกการเปลี่ยนแปลงฝั่งผู้ดูแล — ใครทำอะไรเมื่อไหร่ อ่านจากบันทึกจริงของเซิร์ฟเวอร์")} />
+        <Panel><div style={{ padding: 16, textAlign: "center" }}>{T("Error loading audit trail", "เกิดข้อผิดพลาดในการโหลดบันทึก")}</div></Panel>
+      </div>
+    );
+  }
+
   return (
     <div className="content-pad fade-in" data-no-lex>
       <PageHead kicker={T("Administration · Audit", "ผู้ดูแลระบบ · ตรวจสอบ")} title={T("Audit Log", "บันทึกการตรวจสอบ")} tag="local"
-        desc={T("Every change to users, roles, quota and permissions — who did what, and when.",
-                "ทุกการเปลี่ยนแปลงเรื่องสมาชิก บทบาท โควตา และสิทธิ์ — ใครทำอะไรเมื่อไหร่")} />
+        desc={T("Every admin-plane change — who did what, and when. Read from the server's audit trail.",
+                "ทุกการเปลี่ยนแปลงฝั่งผู้ดูแล — ใครทำอะไรเมื่อไหร่ อ่านจากบันทึกจริงของเซิร์ฟเวอร์")} />
 
       <div className="audit-filters">
         <div className="audit-search">
           <span className="as-ic">🔍</span>
           <input value={q} onChange={e => setQ(e.target.value)}
-            placeholder={T("Search actor, target, detail…", "ค้นหาผู้ทำ · เป้าหมาย · รายละเอียด…")} />
+            placeholder={T("Search actor, action, target…", "ค้นหาผู้ทำ · การกระทำ · เป้าหมาย…")} />
           {q && <button className="as-clear" title={T("Clear", "ล้าง")} onClick={() => setQ("")}>✕</button>}
         </div>
         <DatePicker value={date} onChange={setDate} />
@@ -387,7 +386,7 @@ function AuditLog({ Sys }) {
       <div className="audit-pills">
         {actionTypes.map(a => (
           <button key={a} className={`tab-pill ${filter === a ? "on" : ""}`} onClick={() => setFilter(a)}>
-            {a === "all" ? T("All", "ทั้งหมด") : T(ACTION_PILL[a][0], ACTION_PILL[a][1])}
+            {a === "all" ? T("All", "ทั้งหมด") : T(PREFIX_PILL[a][0], PREFIX_PILL[a][1])}
           </button>
         ))}
         <span className="audit-count mono">{list.length} {T("entries", "รายการ")}</span>
@@ -396,24 +395,26 @@ function AuditLog({ Sys }) {
 
       <Panel bodyPad={false}>
         <div style={{ padding: 6 }}>
-          {list.length === 0 ? <Empty icon="📋" title={T("No matching entries", "ไม่มีรายการที่ตรง")} sub={hasFilter ? T("Try clearing the filters", "ลองล้างตัวกรอง") : null} /> :
-            list.map(e => {
-              const m = ACTION_META[e.action] || { icon: "•", tone: "info", th: e.action, en: e.action };
-              return (
-                <div key={e.id} className="audit-row">
-                  <span className={`audit-ic`} data-tone={m.tone}>{m.icon}</span>
-                  <div className="audit-body">
-                    <div className="audit-line">
-                      <span className="audit-actor">{name(e.actor, "user")}</span>
-                      <span className="muted"> {T(m.en, m.th).toLowerCase()} </span>
-                      <span className="audit-target">{name(e.target, e.targetType)}</span>
-                    </div>
-                    <div className="mono faint" style={{ fontSize: 11 }}>{e.meta}</div>
-                  </div>
-                  <span className="mono faint audit-time">{e.time}</span>
+          {list.length === 0
+            ? <div className="audit-empty">{T("No audit entries match your filters", "ไม่มีรายการบันทึกที่ตรงกับตัวกรองของคุณ")}</div>
+            : list.map(e => (
+              <div key={e.at + e.actor + e.action} style={{ padding: "6px 12px", borderBottom: "1px solid var(--line-soft)", fontSize: 13 }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{e.actor}</span>
+                  <span style={{ color: "var(--ink-2)" }}>{e.action}</span>
+                  <span style={{ color: "var(--ink-3)" }}>{e.target}</span>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{new Date(e.at).toLocaleString()}</span>
                 </div>
-              );
-            })}
+                {e.detail && Object.keys(e.detail).length > 0 && (
+                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
+                    {Object.entries(e.detail).map(([k, v]) => (
+                      <div key={k}><span style={{ fontFamily: "monospace" }}>{k}</span>: {v}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
         </div>
       </Panel>
     </div>

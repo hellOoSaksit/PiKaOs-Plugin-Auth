@@ -86,18 +86,9 @@ const USER_PERMS_SEED = {
 const AGENT_OWNER = { a1: "u_nicha", a2: "u_kitt", a3: "u_somchai", a4: "u_somchai", a5: "u_ploy", a6: "u_somchai" };
 function ownerOf(agentId) { return AGENT_OWNER[agentId] || "u_somchai"; }
 
-/* ---- audit log seed (most recent first) ---- */
-const AUDIT_SEED = [
-  { id: "ev9", actor: "u_somchai", action: "user.suspend",     targetType: "user", target: "u_dao",   meta: "เกินโควตาต่อเนื่อง",        time: "2 ชม." },
-  { id: "ev8", actor: "u_somchai", action: "quota.update",     targetType: "user", target: "u_nicha", meta: "200K → 300K / สัปดาห์",     time: "5 ชม." },
-  { id: "ev7", actor: "u_somchai", action: "permission.grant", targetType: "user", target: "u_kitt",  meta: "+ audit.view",              time: "เมื่อวาน" },
-  { id: "ev6", actor: "u_somchai", action: "role.update",      targetType: "role", target: "manager", meta: "+ workflow.manage",         time: "เมื่อวาน" },
-  { id: "ev5", actor: "u_nicha",   action: "user.create",      targetType: "user", target: "u_anan",  meta: "บทบาท viewer",              time: "2 วัน" },
-  { id: "ev4", actor: "u_somchai", action: "permission.deny",  targetType: "user", target: "u_ploy",  meta: "− task.run",               time: "3 วัน" },
-  { id: "ev3", actor: "u_somchai", action: "user.create",      targetType: "user", target: "u_ploy",  meta: "บทบาท member",              time: "4 วัน" },
-  { id: "ev2", actor: "u_somchai", action: "role.update",      targetType: "role", target: "member",  meta: "− user.view.any",           time: "5 วัน" },
-  { id: "ev1", actor: "u_somchai", action: "user.create",      targetType: "user", target: "u_kitt",  meta: "บทบาท member",              time: "6 วัน" },
-];
+/* Audit rows are read live from Core's /api/audit trail (v2). No seed is kept here — a security
+   screen must never render fabricated rows, so the AuditLog fetches real data and shows an error
+   state on failure instead of falling back to mock entries. */
 
 const ACTION_META = {
   "user.create":      { icon: "➕", tone: "ok",   th: "สร้างสมาชิก",      en: "Created user" },
@@ -111,7 +102,7 @@ const ACTION_META = {
 };
 
 /* ---- persistence ---- */
-const U_KEYS = { users: "guildos-users-v2", rolePerms: "guildos-roleperms-v2", userPerms: "guildos-userperms-v2", roles: "guildos-roles-v2", audit: "guildos-audit-v2" };
+const U_KEYS = { users: "guildos-users-v2", rolePerms: "guildos-roleperms-v2", userPerms: "guildos-userperms-v2", roles: "guildos-roles-v2" };
 function loadU(key, fallback) {
   try { const raw = localStorage.getItem(U_KEYS[key]); return raw === null ? fallback : JSON.parse(raw); }
   catch { return fallback; }
@@ -137,14 +128,13 @@ function userById(users, id) { return users.find(u => u.id === id); }
 function roleByKey(roles, key) { return roles.find(r => r.key === key) || { key, th: key, en: key, color: "" }; }
 
 Object.assign(window, {
-  PERMISSIONS, PERM_KEYS, ROLES_SEED, ROLE_PERMS_SEED, USERS_SEED, USER_PERMS_SEED, AUDIT_SEED,
+  PERMISSIONS, PERM_KEYS, ROLES_SEED, ROLE_PERMS_SEED, USERS_SEED, USER_PERMS_SEED,
   ACTION_META, AGENT_OWNER, ownerOf, loadU, saveU, resolvePerms, fmtTok, usagePct, userById, roleByKey,
 });
 
 export {
   ACTION_META,
   AGENT_OWNER,
-  AUDIT_SEED,
   PERMISSIONS,
   PERM_KEYS,
   ROLES_SEED,
