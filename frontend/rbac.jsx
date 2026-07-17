@@ -355,17 +355,6 @@ function AuditLog({ Sys }) {
   });
   const hasFilter = filter !== "all" || !!date || !!query;
 
-  if (auditError) {
-    return (
-      <div className="content-pad fade-in">
-        <PageHead kicker={T("Administration · Audit", "ผู้ดูแลระบบ · ตรวจสอบ")} title={T("Audit Log", "บันทึกการตรวจสอบ")} tag="local"
-          desc={T("Every admin-plane change — who did what, and when. Read from the server's audit trail.",
-                  "ทุกการเปลี่ยนแปลงฝั่งผู้ดูแล — ใครทำอะไรเมื่อไหร่ อ่านจากบันทึกจริงของเซิร์ฟเวอร์")} />
-        <Panel><div style={{ padding: 16, textAlign: "center" }}>{T("Error loading audit trail", "เกิดข้อผิดพลาดในการโหลดบันทึก")}</div></Panel>
-      </div>
-    );
-  }
-
   return (
     <div className="content-pad fade-in" data-no-lex>
       <PageHead kicker={T("Administration · Audit", "ผู้ดูแลระบบ · ตรวจสอบ")} title={T("Audit Log", "บันทึกการตรวจสอบ")} tag="local"
@@ -395,26 +384,26 @@ function AuditLog({ Sys }) {
 
       <Panel bodyPad={false}>
         <div style={{ padding: 6 }}>
-          {list.length === 0
-            ? <div className="audit-empty">{T("No audit entries match your filters", "ไม่มีรายการบันทึกที่ตรงกับตัวกรองของคุณ")}</div>
-            : list.map(e => (
-              <div key={e.at + e.actor + e.action} style={{ padding: "6px 12px", borderBottom: "1px solid var(--line-soft)", fontSize: 13 }}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{e.actor}</span>
-                  <span style={{ color: "var(--ink-2)" }}>{e.action}</span>
-                  <span style={{ color: "var(--ink-3)" }}>{e.target}</span>
-                  <span style={{ flex: 1 }} />
-                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{new Date(e.at).toLocaleString()}</span>
-                </div>
-                {e.detail && Object.keys(e.detail).length > 0 && (
-                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
-                    {Object.entries(e.detail).map(([k, v]) => (
-                      <div key={k}><span style={{ fontFamily: "monospace" }}>{k}</span>: {v}</div>
-                    ))}
+          {auditError
+            ? <Empty icon="⚠️" title={T("Audit trail unavailable", "อ่านบันทึกตรวจสอบไม่ได้")}
+                sub={T("Needs a Core with the audit API and the audit.view permission.", "ต้องใช้ Core ที่มี audit API และสิทธิ์ audit.view")} />
+            : list.length === 0
+              ? <Empty icon="📋" title={T("No matching entries", "ไม่มีรายการที่ตรง")} sub={hasFilter ? T("Try clearing the filters", "ลองล้างตัวกรอง") : null} />
+              : list.map((e, i) => (
+                <div key={`${e.at}-${i}`} className="audit-row">
+                  <span className="audit-ic" data-tone="info">•</span>
+                  <div className="audit-body">
+                    <div className="audit-line">
+                      <span className="audit-actor">{e.actor}</span>
+                      <span className="muted"> {e.action} </span>
+                      <span className="audit-target">{e.target}</span>
+                    </div>
+                    {e.detail && Object.keys(e.detail).length > 0 &&
+                      <div className="mono faint" style={{ fontSize: 11 }}>{JSON.stringify(e.detail)}</div>}
                   </div>
-                )}
-              </div>
-            ))}
+                  <span className="mono faint audit-time">{new Date(e.at).toLocaleString()}</span>
+                </div>
+              ))}
         </div>
       </Panel>
     </div>
