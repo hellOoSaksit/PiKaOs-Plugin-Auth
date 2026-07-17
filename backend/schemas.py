@@ -8,13 +8,20 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+# RFC 5321 caps an email address at 254 chars, and a username is far shorter — so nothing legitimate
+# comes close. Unbounded, this field was an attack surface twice over: it is written to Core's audit
+# trail on a FAILED (anonymous) login, where oversized entries can rotate real history away, and it is
+# interpolated into a Redis throttle key. Bound at the edge (rule 10); Core's audit sink clips too.
+_IDENTIFIER_MAX = 254
+
+
 class LoginIn(BaseModel):
-    usernameOrEmail: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+    usernameOrEmail: str = Field(min_length=1, max_length=_IDENTIFIER_MAX)
+    password: str = Field(min_length=1, max_length=1024)
 
 
 class ForgotIn(BaseModel):
-    usernameOrEmail: str = Field(min_length=1)
+    usernameOrEmail: str = Field(min_length=1, max_length=_IDENTIFIER_MAX)
 
 
 class TokenOut(BaseModel):

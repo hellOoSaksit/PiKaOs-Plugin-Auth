@@ -46,8 +46,13 @@ def app_client(monkeypatch, tmp_path):
     login_throttle.bind(None)
 
 
+# Distinctive enough that a hit can only be the real thing. The old value was "pw" — two chars, which
+# would also match by accident inside an unrelated word.
+_PASSWORD = "SECRET-PASSWORD-3f9a2c"
+
+
 def _login(client):
-    return client.post("/api/auth/login", json={"usernameOrEmail": "somchai", "password": "pw"})
+    return client.post("/api/auth/login", json={"usernameOrEmail": "somchai", "password": _PASSWORD})
 
 
 def test_failed_login_is_audited_without_the_password(app_client, monkeypatch):
@@ -58,7 +63,11 @@ def test_failed_login_is_audited_without_the_password(app_client, monkeypatch):
     rows = audit.read(action="auth.login.failed")
     assert rows and rows[0]["target"] == "somchai"
     import json as _json
-    assert "pw" not in _json.dumps(rows[0]["detail"])   # password never enters the trail
+    # Search the WHOLE trail, not just `detail`. These call sites pass three positional args, so
+    # `detail` is always `{}` — asserting against it alone reads as a rule-2 guarantee while actually
+    # testing `"pw" not in "{}"`, which is true no matter what the implementation leaks. Any field
+    # (target, actor, a future detail) that ever carried the password must fail this.
+    assert _PASSWORD not in _json.dumps(audit.read())
 
 
 def test_throttled_login_is_audited(app_client, monkeypatch):
