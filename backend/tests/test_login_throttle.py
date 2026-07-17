@@ -73,3 +73,22 @@ async def test_fail_open_when_redis_unbound():
     assert await login_throttle.blocked_for(ACCT, IP) == 0
     await login_throttle.record_failure(ACCT, IP)  # must not raise
     await login_throttle.reset(ACCT)               # must not raise
+
+
+@pytest.mark.asyncio
+async def test_throttle_audit_is_deduped_per_ip(redis):
+    # A blocked source can send unlimited refused requests. The throttle audit must fire ONCE per IP
+    # per window, or an attacker floods the trail — so only the first call is truthy.
+    assert await login_throttle.first_throttle_from_ip(IP) is True
+    for _ in range(50):
+        assert await login_throttle.first_throttle_from_ip(IP) is False
+    # a different source is independent — its own first throttle still records
+    assert await login_throttle.first_throttle_from_ip("198.51.100.9") is True
+
+
+@pytest.mark.asyncio
+async def test_throttle_dedup_is_amplification_safe_when_redis_unbound():
+    # If the marker can't be set, skip the audit (False) rather than write it — auditing on every
+    # error would be the amplification this guards against.
+    login_throttle.bind(None)
+    assert await login_throttle.first_throttle_from_ip(IP) is False

@@ -90,7 +90,10 @@ async def login(
     # A generic 429 (never "which of the two tripped", never whether the account exists) + Retry-After.
     retry_after = await login_throttle.blocked_for(body.usernameOrEmail, ip)
     if retry_after > 0:
-        audit.log("anonymous", "auth.login.throttled", body.usernameOrEmail)
+        # Audit the lockout ONCE per IP per window, not on every 429 — a blocked source can send
+        # unlimited refused requests, and auditing each lets it flood the trail (see first_throttle_from_ip).
+        if await login_throttle.first_throttle_from_ip(ip):
+            audit.log("anonymous", "auth.login.throttled", body.usernameOrEmail)
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "Too many login attempts, try again later",

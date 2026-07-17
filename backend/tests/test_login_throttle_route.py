@@ -52,3 +52,18 @@ def test_sixth_failed_login_is_throttled(client):
     blocked = _login(client)                        # the sixth is refused before hitting auth_service
     assert blocked.status_code == 429
     assert int(blocked.headers["retry-after"]) > 0
+
+
+def test_a_throttle_flood_writes_one_audit_line_not_one_per_request(client, tmp_path, monkeypatch):
+    # A blocked source pounding the endpoint must not amplify into unbounded audit writes: many 429s,
+    # exactly one auth.login.throttled line for the window. Without the per-IP dedup this was N lines.
+    from app.core import audit, kernel_state
+    monkeypatch.setattr(kernel_state.settings, "kernel_state_dir", str(tmp_path))
+
+    for _ in range(5):
+        _login(client)                              # burn the account cap
+    for _ in range(30):
+        assert _login(client).status_code == 429    # 30 refused requests
+
+    throttled = [r for r in audit.read(limit=999) if r["action"] == "auth.login.throttled"]
+    assert len(throttled) == 1                       # one lockout line, not thirty

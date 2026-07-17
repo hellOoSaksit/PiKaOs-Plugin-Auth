@@ -25,6 +25,7 @@ _redis = None  # the aioredis client, bound from redis.Connection at register()
 
 _ACCT = "login:fail:acct:{}"   # login:fail:acct:<username> -> failed-attempt count (TTL = window)
 _IP = "login:fail:ip:{}"       # login:fail:ip:<ip>         -> failed-attempt count (TTL = window)
+_THROTTLE_SEEN = "login:throttle:seen:ip:{}"   # login:throttle:seen:ip:<ip> -> "1" once we've audited it
 
 
 def bind(client) -> None:
@@ -67,6 +68,28 @@ async def blocked_for(username: str, ip: str) -> int:
     except RedisError as exc:
         log.warning("redis down — skipping login throttle check (fail-open): %s", exc)
         return 0
+
+
+async def first_throttle_from_ip(ip: str) -> bool:
+    """True the first time this IP is throttled in the window, False on every repeat.
+
+    A throttled request writes an audit line, and a blocked source can keep sending 429'd requests
+    forever — so auditing every one lets an attacker force unbounded trail writes (and, since rotation
+    keeps only one predecessor, push real history out). Dedupe on the IP: record "this source is now
+    being refused" ONCE per window. The preceding `auth.login.failed` lines already captured the attack.
+
+    Amplification-safe on error: if the marker can't be set (Redis down / not bound), return False —
+    skipping one throttle line is far cheaper than turning every 429 into a write, which is the very
+    thing this guards against."""
+    if _redis is None:
+        return False
+    try:
+        # SET NX EX: set only if absent, expiring with the window. `True` ⇒ we won the race ⇒ audit once.
+        return bool(await _redis.set(_THROTTLE_SEEN.format(ip), "1",
+                                     nx=True, ex=settings.login_throttle_window_seconds))
+    except RedisError as exc:
+        log.warning("redis down — suppressing throttle audit to avoid write amplification: %s", exc)
+        return False
 
 
 async def _bump(key: str) -> None:
