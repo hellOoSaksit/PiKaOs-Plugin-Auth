@@ -16,7 +16,7 @@ import { Admin, RoleBadge, StatusPill } from './admin.jsx';
 
 /* ---------------- USER FORM (create / edit) ---------------- */
 function UserForm({ Sys, initial, onClose }) {
-  const { roles, T } = Sys;
+  const { roles, T, t } = Sys;
   const edit = !!(initial && initial.id);
   const [f, setF] = useState(() => ({
     display: "", username: "", email: "", role: "member", status: "active",
@@ -54,7 +54,7 @@ function UserForm({ Sys, initial, onClose }) {
   );
 
   return (
-    <Modal open onClose={onClose} showClose className="userform-modal ornate" title={title} footer={foot}>
+    <Modal open onClose={onClose} showClose closeLabel={t('common.close')} className="userform-modal ornate" title={title} footer={foot}>
         <div className="userform-body" data-no-lex>
           <Field label={T("Avatar", "รูปแทนตัว")}>
             <div className="avatar-pick">

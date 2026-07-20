@@ -19,6 +19,7 @@
     "firstadmin.errWeak": "Password is too short or too common.",
     "firstadmin.errClosed": "An administrator already exists — sign in instead.",
     "firstadmin.errNetwork": "Cannot reach the server.",
-    "firstadmin.ok": "Admin created — signing in…"
+    "firstadmin.ok": "Admin created — signing in…",
+    "common.close": "Close"
   }
 }
