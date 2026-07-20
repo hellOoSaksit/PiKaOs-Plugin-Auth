@@ -1,7 +1,7 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-rbac.jsx). */
 import React from 'react';
 const { useState, useEffect } = React;
-import { Button, Empty, Field, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
+import { Button, Empty, Field, HelpNote, Meter, Modal, PageHead, Panel, StatTile } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
@@ -33,21 +33,29 @@ function UserForm({ Sys, initial, onClose }) {
     onClose();
   };
 
-  return (
-    <div className="drawer-overlay" data-no-lex onClick={onClose} style={{ justifyContent: "center", alignItems: "center", padding: 24 }}>
-      <div className="userform ornate" onClick={e => e.stopPropagation()}>
-        <div className="builder-head">
-          <span className="ph-icon" style={{ fontSize: 18 }}>{edit ? "✎" : "➕"}</span>
-          <div>
-            <div className="kicker">{edit ? T("Edit user", "แก้ไขสมาชิก") : T("New user", "เพิ่มสมาชิก")}</div>
-            <h2 style={{ fontFamily: "var(--font-head)", fontSize: 19, margin: "2px 0 0", color: "var(--ink)" }}>
-              {edit ? f.display || T("User", "สมาชิก") : T("Create an account", "สร้างบัญชีใหม่")}
-            </h2>
-          </div>
-          <button className="drawer-close" onClick={onClose} style={{ marginLeft: "auto" }}>✕</button>
-        </div>
+  const title = (
+    <span className="userform-title">
+      <span className="ph-icon" style={{ fontSize: 18 }}>{edit ? "✎" : "➕"}</span>
+      <span>
+        <span className="kicker" style={{ display: "block" }}>{edit ? T("Edit user", "แก้ไขสมาชิก") : T("New user", "เพิ่มสมาชิก")}</span>
+        <span style={{ display: "block", fontFamily: "var(--font-head)", fontSize: 19, marginTop: 2, color: "var(--ink)" }}>
+          {edit ? f.display || T("User", "สมาชิก") : T("Create an account", "สร้างบัญชีใหม่")}
+        </span>
+      </span>
+    </span>
+  );
+  const foot = (
+    <>
+      <Button kind="ghost" onClick={onClose}>{T("Cancel", "ยกเลิก")}</Button>
+      <Button kind="gold" onClick={submit} style={{ opacity: canSave ? 1 : .5, pointerEvents: canSave ? "auto" : "none" }}>
+        {edit ? T("Save changes", "บันทึก") : T("Create user", "สร้างสมาชิก")}
+      </Button>
+    </>
+  );
 
-        <div className="userform-body">
+  return (
+    <Modal open onClose={onClose} showClose className="userform-modal ornate" title={title} footer={foot}>
+        <div className="userform-body" data-no-lex>
           <Field label={T("Avatar", "รูปแทนตัว")}>
             <div className="avatar-pick">
               {AVATAR_PRESETS.map(a => (
@@ -92,15 +100,7 @@ function UserForm({ Sys, initial, onClose }) {
             </div>
           </Field>
         </div>
-
-        <div className="userform-foot">
-          <Button kind="ghost" onClick={onClose}>{T("Cancel", "ยกเลิก")}</Button>
-          <Button kind="gold" onClick={submit} style={{ opacity: canSave ? 1 : .5, pointerEvents: canSave ? "auto" : "none" }}>
-            {edit ? T("Save changes", "บันทึก") : T("Create user", "สร้างสมาชิก")}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
