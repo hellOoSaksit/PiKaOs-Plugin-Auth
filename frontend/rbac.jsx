@@ -1,7 +1,7 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-rbac.jsx). */
 import React from 'react';
 const { useState, useEffect } = React;
-import { Button, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
+import { Button, Empty, Field, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
@@ -13,15 +13,6 @@ import { Admin, RoleBadge, StatusPill } from './admin.jsx';
    RBAC SCREENS — User detail, Roles & Permissions, Audit log,
    and the User form modal. All bilingual via Sys.T, data-no-lex.
    ============================================================ */
-
-function Field({ label, hint, children }) {
-  return (
-    <div className="bf">
-      <label className="bf-label">{label}{hint && <span className="bf-hint">{hint}</span>}</label>
-      {children}
-    </div>
-  );
-}
 
 /* ---------------- USER FORM (create / edit) ---------------- */
 function UserForm({ Sys, initial, onClose }) {
