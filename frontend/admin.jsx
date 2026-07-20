@@ -1,7 +1,7 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-admin.jsx). */
 import React from 'react';
 const { useState } = React;
-import { Button, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
+import { Button, Empty, HelpNote, Meter, PageHead, Panel, StatTile, Table } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import { fmtTok, roleByKey, usagePct } from './data-users.jsx';
 
@@ -57,6 +57,39 @@ function Admin({ Sys, onUser }) {
 
   const manage = can("user.manage");
 
+  // One column per field. `className` rides the header + cell <span> (the grid
+  // items) so the .uc-* column widths and the responsive hide of status/last-seen
+  // keep working; per-cell markup lives in each render(row).
+  const columns = [
+    { key: "user", header: T("User", "สมาชิก"), className: "uc-user", render: u => (
+      <>
+        <span className="uavatar" data-no-lex>{u.avatar}</span>
+        <span style={{ minWidth: 0 }}>
+          <span className="uu-name">{u.display}</span>
+          <span className="uu-sub mono">@{u.username}</span>
+        </span>
+      </>
+    ) },
+    { key: "role", header: T("Role", "บทบาท"), className: "uc-role", render: u => <RoleBadge roleKey={u.role} roles={roles} T={T} /> },
+    { key: "status", header: T("Status", "สถานะ"), className: "uc-status", render: u => <StatusPill status={u.status} T={T} /> },
+    { key: "quota", header: T("Token usage", "การใช้โทเคน"), className: "uc-quota", render: u => <QuotaCell u={u} T={T} /> },
+    { key: "lastLogin", header: T("Last seen", "ใช้งานล่าสุด"), className: "uc-seen", render: u => <span className="mono faint">{u.lastLogin}</span> },
+    { key: "act", header: "", render: u => (
+      // Stop propagation so the action buttons don't also trigger the row's onUser navigate.
+      <span className="uc-act" onClick={e => e.stopPropagation()}>
+        <Button kind="ghost" size="sm" icon="view" label={T("View", "ดู")} onClick={() => onUser(u.id)} />
+        {manage && <Button kind="ghost" size="sm" icon="edit" label={T("Edit", "แก้ไข")} onClick={() => Sys.openUserForm(u)} />}
+        {manage && u.id !== Sys.me.id && (
+          // Suspend/Restore keeps the flat `.admin-iconbtn` — its ⛔/↺ states have no
+          // design-system icon (no "ban"/"restore"), and forcing one would trip Button's
+          // emoji guard. Flagged for a future restore/unlock icon (U1 task-3 report).
+          <button className="admin-iconbtn danger" title={u.status === "active" ? T("Suspend", "ระงับ") : T("Restore", "คืนสถานะ")}
+            onClick={() => Sys.toggleSuspend(u)}>{u.status === "active" ? "⛔" : "↺"}</button>
+        )}
+      </span>
+    ) },
+  ];
+
   return (
     <div className="content-pad fade-in" data-no-lex>
       <PageHead kicker={T("Administration · Users", "ผู้ดูแลระบบ · สมาชิก")} title={T("User Management", "จัดการสมาชิก")} tag="local"
@@ -97,42 +130,11 @@ function Admin({ Sys, onUser }) {
             {rows.length === 0 ? (
               <Empty icon="👥" title={T("No users found", "ไม่พบสมาชิก")} sub={T("Try a different search or filter", "ลองคำค้นหรือตัวกรองอื่น")} />
             ) : (
-              <div className="utable">
-                <div className="utable-th">
-                  <span className="uc-user">{T("User", "สมาชิก")}</span>
-                  <span className="uc-role">{T("Role", "บทบาท")}</span>
-                  <span className="uc-status">{T("Status", "สถานะ")}</span>
-                  <span className="uc-quota">{T("Token usage", "การใช้โทเคน")}</span>
-                  <span className="uc-seen">{T("Last seen", "ใช้งานล่าสุด")}</span>
-                  <span className="uc-act"></span>
-                </div>
-                {rows.map(u => (
-                  <div key={u.id} className={`utable-tr ${u.status === "suspended" ? "is-suspended" : ""}`} onClick={() => onUser(u.id)}>
-                    <span className="uc-user">
-                      <span className="uavatar" data-no-lex>{u.avatar}</span>
-                      <span style={{ minWidth: 0 }}>
-                        <span className="uu-name">{u.display}</span>
-                        <span className="uu-sub mono">@{u.username}</span>
-                      </span>
-                    </span>
-                    <span className="uc-role"><RoleBadge roleKey={u.role} roles={roles} T={T} /></span>
-                    <span className="uc-status"><StatusPill status={u.status} T={T} /></span>
-                    <span className="uc-quota"><QuotaCell u={u} T={T} /></span>
-                    <span className="uc-seen mono faint">{u.lastLogin}</span>
-                    <span className="uc-act" onClick={e => e.stopPropagation()}>
-                      <Button kind="ghost" size="sm" icon="view" label={T("View", "ดู")} onClick={() => onUser(u.id)} />
-                      {manage && <Button kind="ghost" size="sm" icon="edit" label={T("Edit", "แก้ไข")} onClick={() => Sys.openUserForm(u)} />}
-                      {manage && u.id !== Sys.me.id && (
-                        // Suspend/Restore keeps the flat `.admin-iconbtn` — its ⛔/↺ states have no
-                        // design-system icon (no "ban"/"restore"), and forcing one would trip Button's
-                        // emoji guard. Flagged for a future restore/unlock icon (U1 task-3 report).
-                        <button className="admin-iconbtn danger" title={u.status === "active" ? T("Suspend", "ระงับ") : T("Restore", "คืนสถานะ")}
-                          onClick={() => Sys.toggleSuspend(u)}>{u.status === "active" ? "⛔" : "↺"}</button>
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              // Rows open the user detail on click; keyboard users reach the same
+              // detail via the row's focusable "View" button, so rows stay mouse-only.
+              <Table columns={columns} rows={rows}
+                onRowClick={u => onUser(u.id)}
+                rowClassName={u => u.status === "suspended" ? "is-suspended" : ""} />
             )}
           </div>
         </Panel>
