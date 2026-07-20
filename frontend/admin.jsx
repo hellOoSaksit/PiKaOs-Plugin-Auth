@@ -1,7 +1,8 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-admin.jsx). */
 import React from 'react';
 const { useState } = React;
-import { Btn, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/components.jsx';
+import { Btn, Empty, HelpNote, PageHead, Panel, StatTile } from '../../components/components.jsx';
+import { Meter } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import { fmtTok, roleByKey, usagePct } from './data-users.jsx';
 
@@ -145,7 +146,7 @@ function Admin({ Sys, onUser }) {
                       <span style={{ fontSize: 13 }} data-no-lex>{u.avatar}</span>
                       <span style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.display.split(" ")[0]}</span>
                     </span>
-                    <Meter kind="mana" val={pct} /><span className="sl-num">{fmtTok(u.used)}</span>
+                    <Meter kind="quota" val={pct} /><span className="sl-num">{fmtTok(u.used)}</span>
                   </div>
                 );
               })}

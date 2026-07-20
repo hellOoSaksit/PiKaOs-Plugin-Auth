@@ -1,7 +1,8 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-rbac.jsx). */
 import React from 'react';
 const { useState, useEffect } = React;
-import { Btn, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/components.jsx';
+import { Btn, Empty, HelpNote, PageHead, Panel, StatTile } from '../../components/components.jsx';
+import { Meter } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
@@ -185,7 +186,7 @@ function UserDetail({ Sys, userId }) {
                 <span className="muted" style={{ fontSize: 13 }}>{fmtTok(u.used)} / {fmtTok(u.quota)}</span>
                 <span className={`mono ${pct >= 90 ? "" : "gold-text"}`} style={{ fontSize: 13, color: pct >= 90 ? "var(--crimson)" : undefined }}>{pct}%</span>
               </div>
-              <Meter kind="mana" val={pct} />
+              <Meter kind="quota" val={pct} />
               <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
                 {[50000, 100000, 300000, null].map(qn => (
                   <button key={String(qn)} className={`quota-chip ${u.quota === qn ? "on" : ""}`} onClick={() => Sys.setQuota(u, qn)}>
