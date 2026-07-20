@@ -1,8 +1,7 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-admin.jsx). */
 import React from 'react';
 const { useState } = React;
-import { Btn } from '../../components/components.jsx';
-import { Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
+import { Button, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import { fmtTok, roleByKey, usagePct } from './data-users.jsx';
 
@@ -64,7 +63,7 @@ function Admin({ Sys, onUser }) {
         desc={T("Manage real user accounts — roles, status, and token quota per person. Distinct from AI agents.",
                 "จัดการบัญชีผู้ใช้จริง — บทบาท สถานะ และโควตาโทเคนรายคน (แยกจาก AI agent)")}
         actions={manage
-          ? <Btn kind="gold" sm icon="➕" onClick={() => Sys.openUserForm()}>{T("New user", "เพิ่มสมาชิก")}</Btn>
+          ? <Button kind="gold" size="sm" icon="add" onClick={() => Sys.openUserForm()}>{T("New user", "เพิ่มสมาชิก")}</Button>
           : <span className="perm-hint mono">{T("view only", "ดูอย่างเดียว")}</span>} />
 
       <HelpNote tag="local">{T("Edits (role, quota, suspend) are saved on your device. Token usage figures are demo estimates. Use the role switcher (top-right) to test what each role can do.",
@@ -121,9 +120,12 @@ function Admin({ Sys, onUser }) {
                     <span className="uc-quota"><QuotaCell u={u} T={T} /></span>
                     <span className="uc-seen mono faint">{u.lastLogin}</span>
                     <span className="uc-act" onClick={e => e.stopPropagation()}>
-                      <button className="admin-iconbtn" title={T("View", "ดู")} onClick={() => onUser(u.id)}>↗</button>
-                      {manage && <button className="admin-iconbtn" title={T("Edit", "แก้ไข")} onClick={() => Sys.openUserForm(u)}>✎</button>}
+                      <Button kind="ghost" size="sm" icon="view" label={T("View", "ดู")} onClick={() => onUser(u.id)} />
+                      {manage && <Button kind="ghost" size="sm" icon="edit" label={T("Edit", "แก้ไข")} onClick={() => Sys.openUserForm(u)} />}
                       {manage && u.id !== Sys.me.id && (
+                        // Suspend/Restore keeps the flat `.admin-iconbtn` — its ⛔/↺ states have no
+                        // design-system icon (no "ban"/"restore"), and forcing one would trip Button's
+                        // emoji guard. Flagged for a future restore/unlock icon (U1 task-3 report).
                         <button className="admin-iconbtn danger" title={u.status === "active" ? T("Suspend", "ระงับ") : T("Restore", "คืนสถานะ")}
                           onClick={() => Sys.toggleSuspend(u)}>{u.status === "active" ? "⛔" : "↺"}</button>
                       )}
@@ -154,7 +156,7 @@ function Admin({ Sys, onUser }) {
           </Panel>
 
           <Panel title={T("Roles", "บทบาท")} en="ROLES" icon="🔑"
-            right={can("role.manage") ? <Btn kind="ghost" sm onClick={() => Sys.go("roles")}>{T("Manage →", "จัดการ →")}</Btn> : null}>
+            right={can("role.manage") ? <Button kind="ghost" size="sm" onClick={() => Sys.go("roles")}>{T("Manage →", "จัดการ →")}</Button> : null}>
             <div className="col" style={{ gap: 9 }}>
               {roles.map(r => {
                 const count = users.filter(u => u.role === r.key).length;

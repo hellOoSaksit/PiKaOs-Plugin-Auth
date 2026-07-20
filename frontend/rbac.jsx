@@ -1,8 +1,7 @@
 /* PiKaOs — ES module (migrated from PiKaOs-Core/screens-rbac.jsx). */
 import React from 'react';
 const { useState, useEffect } = React;
-import { Btn } from '../../components/components.jsx';
-import { Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
+import { Button, Empty, HelpNote, Meter, PageHead, Panel, StatTile } from '../../components/ui';
 import { Select } from '../../components/ui/Dropdown.jsx';
 import DatePicker from '../../components/ui/DatePicker.jsx';
 import SaveBar from '../../components/ui/SaveBar.jsx';
@@ -104,10 +103,10 @@ function UserForm({ Sys, initial, onClose }) {
         </div>
 
         <div className="userform-foot">
-          <Btn kind="ghost" onClick={onClose}>{T("Cancel", "ยกเลิก")}</Btn>
-          <Btn kind="gold" onClick={submit} style={{ opacity: canSave ? 1 : .5, pointerEvents: canSave ? "auto" : "none" }}>
+          <Button kind="ghost" onClick={onClose}>{T("Cancel", "ยกเลิก")}</Button>
+          <Button kind="gold" onClick={submit} style={{ opacity: canSave ? 1 : .5, pointerEvents: canSave ? "auto" : "none" }}>
             {edit ? T("Save changes", "บันทึก") : T("Create user", "สร้างสมาชิก")}
-          </Btn>
+          </Button>
         </div>
       </div>
     </div>
@@ -150,9 +149,9 @@ function UserDetail({ Sys, userId }) {
         </div>
         {manageUsers && (
           <div className="row" style={{ gap: 8 }}>
-            <Btn kind="ghost" sm icon="✎" onClick={() => Sys.openUserForm(u)}>{T("Edit", "แก้ไข")}</Btn>
+            <Button kind="ghost" size="sm" icon="edit" onClick={() => Sys.openUserForm(u)}>{T("Edit", "แก้ไข")}</Button>
             {u.id !== Sys.me.id && (
-              <Btn kind="ghost" sm onClick={() => Sys.toggleSuspend(u)}>{u.status === "active" ? T("Suspend", "ระงับ") : T("Restore", "คืนสถานะ")}</Btn>
+              <Button kind="ghost" size="sm" onClick={() => Sys.toggleSuspend(u)}>{u.status === "active" ? T("Suspend", "ระงับ") : T("Restore", "คืนสถานะ")}</Button>
             )}
           </div>
         )}
@@ -269,7 +268,7 @@ function RolesPermissions({ Sys }) {
       <PageHead kicker={T("Administration · Access", "ผู้ดูแลระบบ · สิทธิ์")} title={T("Roles & Permissions", "บทบาทและสิทธิ์")} tag="local"
         desc={T("Each role is a preset bundle of permissions. Toggle cells to change what a role can do, then Save your changes.",
                 "แต่ละบทบาทคือชุดสิทธิ์สำเร็จรูป · กดที่ช่องเพื่อปรับว่าบทบาทนั้นทำอะไรได้ แล้วกดบันทึก")}
-        actions={editable ? <Btn kind="gold" sm icon="➕" onClick={() => Sys.addRole()}>{T("New role", "เพิ่มบทบาท")}</Btn> : <span className="perm-hint mono">{T("view only", "ดูอย่างเดียว")}</span>} />
+        actions={editable ? <Button kind="gold" size="sm" icon="add" onClick={() => Sys.addRole()}>{T("New role", "เพิ่มบทบาท")}</Button> : <span className="perm-hint mono">{T("view only", "ดูอย่างเดียว")}</span>} />
 
       <HelpNote tag="local">{T("Admin always has every permission (locked). System roles can be tuned but not deleted.",
         "ผู้ดูแลระบบมีทุกสิทธิ์เสมอ (ล็อกไว้) · บทบาทระบบปรับได้แต่ลบไม่ได้")}</HelpNote>
