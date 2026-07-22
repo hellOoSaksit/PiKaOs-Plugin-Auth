@@ -61,6 +61,12 @@
       "group": "Admin",
       "name_th": "จัดการการตั้งค่า/เมนู",
       "name_en": "Manage app settings & menu"
+    },
+    {
+      "key": "mcp.manage",
+      "group": "Admin",
+      "name_th": "จัดการเซิร์ฟเวอร์ MCP และทักษะ",
+      "name_en": "Manage MCP servers & skills"
     }
   ],
   "routes": [
