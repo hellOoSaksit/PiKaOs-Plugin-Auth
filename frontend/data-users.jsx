@@ -35,6 +35,7 @@ const CORE_PERMISSIONS = [
   { key: "llm.assign",       group: "Admin",     th: "มอบหมายโมเดลให้ระบบ (engine/search/summarize)", en: "Assign LLM to system roles" },
   { key: "infra.manage",     group: "Admin",     th: "ดู/ทดสอบการเชื่อมต่อ Storage/ระบบ", en: "View/test infrastructure connections" },
   { key: "plugins.manage",   group: "Admin",     th: "ติดตั้ง/เปิด-ปิด/ถอนปลั๊กอิน",      en: "Install / enable / uninstall plugins" },
+  { key: "mcp.manage",       group: "Admin",     th: "จัดการเซิร์ฟเวอร์ MCP และทักษะ",   en: "Manage MCP servers & skills" },
 ];
 /* Permission catalog shown by the RBAC screens. Uses the static base only — importing Core's
    PLUGIN_PERMISSIONS aggregator here formed an ESM cycle (aggregator → auth/index → this module →
